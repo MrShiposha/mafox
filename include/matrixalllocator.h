@@ -1,9 +1,9 @@
-#ifndef MAFOX_DETAIL_MATRIXALLOCATOR_H
-#define MAFOX_DETAIL_MATRIXALLOCATOR_H
+#ifndef MAFOX_MATRIXALLOCATOR_H
+#define MAFOX_MATRIXALLOCATOR_H
 
 #include <memory>
 
-namespace mafox::detail
+namespace mafox
 {
     template <typename T>
     struct MatrixAllocator
@@ -21,7 +21,7 @@ namespace mafox::detail
 
         template<class U> struct rebind 
         {
-            using other = ArenaAllocator<U>; 
+            using other = MatrixAllocator<U>; 
         };
 
         template<class U, class... Args> 
@@ -32,7 +32,7 @@ namespace mafox::detail
         MatrixAllocator() = default;
 
         template <typename U>
-        MatrixAllocator(const MatrixAllocator<U> &) = default;
+        MatrixAllocator(const MatrixAllocator<U> &);
 
         T *allocate(std::size_t);
 
@@ -43,9 +43,9 @@ namespace mafox::detail
 }
 
 template <typename T, typename U>
-bool operator==(const mafox::detail::MatrixAllocator<T> &, const mafox::detail::MatrixAllocator<U> &);
+bool operator==(const mafox::MatrixAllocator<T> &, const mafox::MatrixAllocator<U> &);
 
 template <typename T, typename U>
-bool operator!=(const mafox::detail::MatrixAllocator<T> &, const mafox::detail::MatrixAllocator<U> &);
+bool operator!=(const mafox::MatrixAllocator<T> &, const mafox::MatrixAllocator<U> &);
 
-#endif // MAFOX_DETAIL_MATRIXALLOCATOR_H
+#endif // MAFOX_MATRIXALLOCATOR_H

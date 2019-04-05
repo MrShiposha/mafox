@@ -6,7 +6,7 @@
 #include "../lib/metaxxa.hpp"
 
 #ifdef _MSC_VER
-    #define mafox_inline __mafox_inline
+    #define mafox_inline __forceinline
 #elif defined(__GNUC__)
     #define mafox_inline inline __attribute__((__always_inline__))
 #elif defined(__CLANG__)
@@ -19,9 +19,11 @@
     #define mafox_inline inline
 #endif
 
-#define ENABLE_FN_IF(CONDITION) std::enable_if_t<CONDITION> * = nullptr
+#define MAFOX_EXPAND(...) __VA_ARGS__
 
-namespace mafox::detail
+#define MAFOX_NCPTR(PTR) const_cast<MAFOX_EXPAND(MAFOX_SELF)*>(PTR)
+
+namespace mafox
 {
     using Byte = unsigned char;
 }

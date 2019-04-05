@@ -76,12 +76,8 @@ namespace metaxxa
 
 #endif // METAXXA_ISVALID_H
 
-#ifndef METAXXA_STATIC_TUPLE_H
-#define METAXXA_STATIC_TUPLE_H
-
-
-#ifndef METAXXA_STATICLIST_H
-#define METAXXA_STATICLIST_H
+#ifndef METAXXA_TYPELIST_H
+#define METAXXA_TYPELIST_H
 
 
 namespace metaxxa
@@ -92,9 +88,9 @@ namespace metaxxa
     }
 
     template <typename... Args>
-    class List;
+    class TypeList;
 
-    using Nil = List<>;
+    using Nil = TypeList<>;
 
     template <typename H = Nil, typename... Tail>
     struct CarT
@@ -105,7 +101,7 @@ namespace metaxxa
     template <typename H = Nil, typename... Args>
     struct CdrT
     {
-        using Tail = List<Args...>;
+        using Tail = TypeList<Args...>;
     };
 
     template <typename T>
@@ -121,10 +117,10 @@ namespace metaxxa
     using Cdr = typename CdrT<Args...>::Tail;
 
     template <typename... Args>
-    class List : public detail::ListTag
+    class TypeList : public detail::ListTag
     {
     public:
-        constexpr List() = default;
+        constexpr TypeList() = default;
 
         using Head = Car<Args...>;
         using Tail = Cdr<Args...>;
@@ -134,18 +130,18 @@ namespace metaxxa
 namespace std
 {
     template <typename... Args>
-    class tuple_size<metaxxa::List<Args...>>
+    class tuple_size<metaxxa::TypeList<Args...>>
         : public std::integral_constant<std::size_t, sizeof...(Args)>
     {};
 
     template <>
-    class tuple_size<metaxxa::List<>>
+    class tuple_size<metaxxa::TypeList<>>
         : public std::integral_constant<std::size_t, 0>
     {};
 
     template <size_t INDEX, typename... Args>
-	class tuple_element<INDEX, metaxxa::List<Args...>>
-        : public tuple_element<INDEX - 1, typename metaxxa::List<Args...>::Tail>
+	class tuple_element<INDEX, metaxxa::TypeList<Args...>>
+        : public tuple_element<INDEX - 1, typename metaxxa::TypeList<Args...>::Tail>
 	{};
 
     template <size_t INDEX>
@@ -159,19 +155,136 @@ namespace std
     {};
 
     template <typename... Args>
-	class tuple_element<0, metaxxa::List<Args...>>
+	class tuple_element<0, metaxxa::TypeList<Args...>>
 	{
 	public:
-		using type = typename metaxxa::List<Args...>::Head;
+		using type = typename metaxxa::TypeList<Args...>::Head;
 	};
 }
 
-#endif // METAXXA_STATICLIST_H
+#endif // METAXXA_TYPELIST_H
+
+#ifndef METAXXA_LIETRALLIST_H
+#define METAXXA_LIETRALLIST_H
+
+
+
+#ifndef METAXXA_LITERAL_H
+#define METAXXA_LITERAL_H
+
+namespace metaxxa
+{
+    template <typename T, T LITERAL>
+    struct Literal
+    {
+        using Type = T;
+
+        static constexpr Type VALUE = LITERAL;
+    };
+
+}
+
+#endif // METAXXA_LITERAL_H
+
+namespace metaxxa
+{
+    namespace detail
+    {
+        struct LiteralListTag
+        {};
+    }
+
+    struct LiteralNilT
+    {};
+
+    inline static constexpr LiteralNilT NIL {};
+
+    template <typename T = LiteralNilT, T... LITERALS>
+    struct LiteralList;
+
+    using LiteralNil = LiteralList<>;
+
+    template <typename LiteralH = LiteralNil, typename... LiteralTail>
+    struct LiteralCarT
+    {
+        using Head = LiteralH;
+    };
+
+    template <typename LiteralH = LiteralNil, typename... LiteralTail>
+    struct LiteralCdrT
+    {
+        using Tail = LiteralList<typename LiteralH::Type, LiteralTail::VALUE...>;
+    };
+
+    template <typename LiteralT>
+    struct LiteralCdrT<LiteralT>
+    {
+        using Tail = LiteralNil;
+    };
+
+    template <typename... Literals>
+    using LiteralCar = typename LiteralCarT<Literals...>::Head;
+
+    template <typename... Literals>
+    using LiteralCdr = typename LiteralCdrT<Literals...>::Tail;
+
+    template <typename T, T... LITERALS>
+    struct LiteralList : public detail::LiteralListTag
+    {
+        using Head = LiteralCar<Literal<T, LITERALS>...>;
+        using Tail = LiteralCdr<Literal<T, LITERALS>...>;
+
+        using HeadType = typename Head::Type;
+
+        static constexpr HeadType head()
+        {
+            return Head::VALUE;
+        }
+    };
+
+    template <typename T>
+    struct LiteralList<T> : public detail::LiteralListTag
+    {
+        using Head = LiteralNil;
+        using Tail = LiteralNil;
+
+        using HeadType = LiteralNilT;
+
+        static constexpr HeadType head()
+        {
+            return NIL;
+        }
+    };
+}
+
+template <typename T>
+constexpr bool operator==(const T, const metaxxa::LiteralNilT)
+{
+    return false;
+}
+
+template <typename T>
+constexpr bool operator==(const metaxxa::LiteralNilT, const T)
+{
+    return false;
+}
+
+constexpr bool operator==(const metaxxa::LiteralNilT, const metaxxa::LiteralNilT)
+{
+    return true;
+}
+
+#endif // METAXXA_LIETRALLIST_H
+
+
+#ifndef METAXXA_TYPETUPLE_H
+#define METAXXA_TYPETUPLE_H
+
 
 namespace metaxxa
 {
     template <typename... Args>
-    class StaticTuple;
+    class TypeTuple;
 
     namespace detail
     {
@@ -179,16 +292,16 @@ namespace metaxxa
         struct TupleConcatenator
         {
             template <typename... RHSArgs>
-            static constexpr auto result_tuple(StaticTuple<RHSArgs...> &&) 
-                -> StaticTuple<Args..., RHSArgs...>;
+            static constexpr auto result_tuple(TypeTuple<RHSArgs...> &&) 
+                -> TypeTuple<Args..., RHSArgs...>;
         };
     }
 
     template <typename... Args>
-    class StaticTuple : public List<Args...>
+    class TypeTuple : public TypeList<Args...>
     {
     public:
-        using List = metaxxa::List<Args...>;
+        using List = metaxxa::TypeList<Args...>;
 
         template <std::size_t INDEX>
         using Get = typename std::tuple_element_t<INDEX, List>;
@@ -196,7 +309,7 @@ namespace metaxxa
         template <typename RHSTuple>
         using Concat = decltype(detail::TupleConcatenator<Args...>::template result_tuple(std::declval<RHSTuple>()));
 
-        constexpr StaticTuple() = default;
+        constexpr TypeTuple() = default;
 
         static constexpr bool is_empty();
 
@@ -209,50 +322,50 @@ namespace metaxxa
 namespace std
 {
     template <typename... Args>
-    class tuple_size<metaxxa::StaticTuple<Args...>>
+    class tuple_size<metaxxa::TypeTuple<Args...>>
         : public std::integral_constant<std::size_t, sizeof...(Args)>
     {};
 
     template <>
-    class tuple_size<metaxxa::StaticTuple<>>
+    class tuple_size<metaxxa::TypeTuple<>>
         : public std::integral_constant<std::size_t, 0>
     {};
 
     template <size_t INDEX, typename... Args>
-	class tuple_element<INDEX, metaxxa::StaticTuple<Args...>>
+	class tuple_element<INDEX, metaxxa::TypeTuple<Args...>>
 	{
 	public:
-		using type = tuple_element_t<INDEX, typename metaxxa::StaticTuple<Args...>::List>;
+		using type = tuple_element_t<INDEX, typename metaxxa::TypeTuple<Args...>::List>;
 	};
 }
 
-#endif // METAXXA_STATIC_TUPLE_H
+#endif // METAXXA_TYPETUPLE_H
 
 
 namespace metaxxa
 {
     template <typename... Args>
-    constexpr bool StaticTuple<Args...>::is_empty()
+    constexpr bool TypeTuple<Args...>::is_empty()
     {
         return std::is_same_v<Car<Args...>, Nil>;
     }
 
     template <typename... Args>
-    constexpr std::size_t StaticTuple<Args...>::get_size()
+    constexpr std::size_t TypeTuple<Args...>::get_size()
     {
-        return std::tuple_size_v<StaticTuple<Args...>>;
+        return std::tuple_size_v<TypeTuple<Args...>>;
     }
 
     template <typename... Args>
-    constexpr std::size_t StaticTuple<Args...>::size()
+    constexpr std::size_t TypeTuple<Args...>::size()
     {
         return get_size();
     }
 }
 
 
-#ifndef METAXXA_TYPEIF_H
-#define METAXXA_TYPEIF_H
+#ifndef METAXXA_IF_H
+#define METAXXA_IF_H
 
 
 namespace metaxxa
@@ -289,30 +402,43 @@ namespace metaxxa
     }
 
     template <bool CONDITION>
-    struct TypeIf
+    struct If
     {
         template <typename T>
         using Then = detail::ThenResolver<CONDITION, T>;
     };
 }
 
-#endif // METAXXA_TYPEIF_H
+#endif // METAXXA_IF_H
 
-#ifndef METAXXA_MINIMALARGUMENT_H
-#define METAXXA_MINIMALARGUMENT_H
+#ifndef METAXXA_TYPEIF_H
+#define METAXXA_TYPEIF_H
+
 
 
 namespace metaxxa
 {
     template <typename T>
-    using MinimalArgument = typename 
-        TypeIf<sizeof(T) <= sizeof(T *)>
+    using TypeIf = If<!std::is_same_v<T, std::false_type>>;
+}
+
+#endif // METAXXA_TYPEIF_H
+
+#ifndef METAXXA_TYPEORREF_H
+#define METAXXA_TYPEORREF_H
+
+
+namespace metaxxa
+{
+    template <typename T>
+    using TypeOrRef = typename 
+        If<sizeof(T) <= sizeof(T *)>
                 ::template Then<T>
-                ::template Else<const T &>
+                ::template Else<T &>
                 ::Type;
 }
 
-#endif // METAXXA_MINIMALARGUMENT_H
+#endif // METAXXA_TYPEORREF_H
 
 
 #ifndef METAXXA_TIMES_H
@@ -385,6 +511,36 @@ namespace metaxxa
 #define METAXXA_PARAMETERSCOUNT_H
 
 
+
+#ifndef METAXXA_SIZECONSTANT_H
+#define METAXXA_SIZECONSTANT_H
+
+
+
+#ifndef METAXXA_UPPERVALUE_H
+#define METAXXA_UPPERVALUE_H
+
+namespace metaxxa
+{
+    template <typename T>
+    struct UpperValue
+    {
+        using Type = typename T::value_type;
+
+        static constexpr Type VALUE = T::value;
+    };
+}
+
+#endif // METAXXA_UPPERVALUE_H
+
+namespace metaxxa
+{
+    template <std::size_t INDEX>
+    using SizeConstant = UpperValue<std::integral_constant<std::size_t, INDEX>>;
+}
+
+#endif // METAXXA_SIZECONSTANT_H
+
 namespace metaxxa
 {
     namespace detail
@@ -395,7 +551,7 @@ namespace metaxxa
             typename... Args
         >
         constexpr auto parameters_count(Template<Args...> &&)
-            -> std::integral_constant<std::size_t, sizeof...(Args)>;
+            -> SizeConstant<sizeof...(Args)>;
     }
 
     // Holds number of template parameters of a class template
@@ -405,7 +561,7 @@ namespace metaxxa
     template <typename T>
     constexpr std::size_t parameters_count() 
     {
-        return ParametersCount<T>::value;
+        return ParametersCount<T>::VALUE;
     }
 }
 
@@ -552,7 +708,101 @@ namespace metaxxa
 
 #endif // METAXXA_ALGORITHM_SKIPLAST_H
 
+#ifndef METAXXA_ALGORITHM_FIND_H
+#define METAXXA_ALGORITHM_FIND_H
+
+
+namespace metaxxa
+{
+    namespace detail
+    {
+        template
+        <
+            typename TupleT,
+            template <typename T> typename Functor,
+            std::size_t N   = 0,
+            bool PREV_FOUND = false,
+            bool ENOUGH     = (N >= std::tuple_size_v<TupleT>)
+        >
+        struct Find : Find
+        <
+            TupleT, 
+            Functor,
+            N + 1,
+            Functor<std::tuple_element_t<N, TupleT>>::VALUE,
+            N + 1 >= std::tuple_size_v<TupleT>
+        >
+        {};
+
+        template
+        <
+            typename TupleT,
+            template <typename T> typename Functor,
+            std::size_t N,
+            bool ENOUGH
+        >
+        struct Find
+        <
+            TupleT,
+            Functor,
+            N,
+            true,
+            ENOUGH
+        >
+        {
+            static constexpr bool FOUND = true;
+            static constexpr std::size_t INDEX = N - 1;
+
+            using Type = std::tuple_element_t<INDEX, TupleT>;
+
+            template <typename T>
+            using TypeOr = Type;
+        };
+        
+        template
+        <
+            typename TupleT,
+            template <typename T> typename Functor,
+            std::size_t N
+        >
+        struct Find
+        <
+            TupleT,
+            Functor,
+            N,
+            false,
+            true
+        >
+        {
+            static constexpr bool FOUND = false;
+
+            template <typename T>
+            using TypeOr = T;
+        };
+    }
+
+    template 
+    <
+        typename TupleT,
+        template <typename T> typename Functor
+    >
+    using Find = detail::Find<TupleT, Functor>;
+}
+
+#endif // METAXXA_ALGORITHM_FIND_H
+
 #endif // METAXXA_ALGORITHM_H
+
+
+#ifndef METAXXA_ENABLEFNIF_H
+#define METAXXA_ENABLEFNIF_H
+
+
+#define ENABLE_FN_IF_T(CONDITION) std::enable_if_t<CONDITION> *
+
+#define ENABLE_FN_IF(CONDITION) ENABLE_FN_IF_T(CONDITION) = nullptr
+
+#endif // METAXXA_ENABLEFNIF_H
 
 
 #endif // METAXXA_HPP
