@@ -1,3 +1,6 @@
+#ifndef MAFOX_LEGENDRE_INC
+#define MAFOX_LEGENDRE_INC
+
 #include "legendre.h"
 
 #include <vector>
@@ -359,6 +362,29 @@ namespace mafox
     {
         return legendre_polynomial_roots<T, IntT, RootsContainer, Cache>(_power, cache, eps);
     }
+
+    // template <typename T, typename IntT, typename Cache>
+    // template <typename RootsContainer>
+    // mafox_inline std::future<RootsContainer &> MAFOX_SELF::roots_async
+    // (
+    //     std::launch policy, 
+    //     RootsContainer &roots, 
+    //     metaxxa::TypeOrRef<const T> eps
+    // )
+    // {
+    //     return std::async(policy, [](auto &roots, const auto &eps) { roots<RootsContainer>(roots, eps); }, std::ref(roots), obj_or_ref(eps));
+    // }
+
+    template <typename T, typename IntT, typename Cache>
+    template <typename RootsContainer>
+    mafox_inline std::future<RootsContainer> MAFOX_SELF::roots_async
+    (
+        std::launch policy, 
+        metaxxa::TypeOrRef<const T> eps
+    )
+    {
+        return std::async(policy, [this](const auto &eps) { roots<RootsContainer>(eps); }, obj_or_ref(eps));
+    }
 }
 
 #undef INLINE_MAFOX_LP
@@ -366,3 +392,5 @@ namespace mafox
 #undef MAFOX_SELF
 
 #undef ENABLE_IF_INT_POWER
+
+#endif // MAFOX_LEGENDRE_INC

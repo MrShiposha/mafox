@@ -2,6 +2,7 @@
 #define MAFOX_HPP
 
 #include <type_traits>
+#include <functional>
 #include <utility>
 #include <cstring>
 #include <cstddef>
@@ -9,7 +10,7 @@
 #include <memory>
 #include <vector>
 #include <cmath>
-#include <functional>
+#include <future>
 #include <tuple>
 #include <initializer_list>
 
@@ -450,6 +451,7 @@ namespace metaxxa
 #define METAXXA_TYPEORREF_H
 
 
+
 namespace metaxxa
 {
     template <typename T>
@@ -458,6 +460,32 @@ namespace metaxxa
                 ::template Then<T>
                 ::template Else<T &>
                 ::Type;
+
+    template <typename T>
+    using TypeOrRefWrapper = typename 
+        If<sizeof(T) <= sizeof(T *)>
+                ::template Then<T>
+                ::template Else<std::reference_wrapper<T>>
+                ::Type;
+
+    template <typename T>
+    using TypeOrRefConstWrapper = typename 
+        If<sizeof(T) <= sizeof(T *)>
+                ::template Then<T>
+                ::template Else<std::reference_wrapper<const T>>
+                ::Type;
+
+    template <typename T>
+    auto obj_or_ref(T &obj)
+    {
+        return TypeOrRefWrapper<T>(obj);
+    }
+
+    template <typename T>
+    auto obj_or_cref(const T &obj)
+    {
+        return TypeOrRefConstWrapper<T>(obj);
+    }
 }
 
 #endif // METAXXA_TYPEORREF_H
@@ -820,6 +848,8 @@ namespace metaxxa
 #define METAXXA_ENABLEFNIF_H
 
 
+#define ENABLE_T_IF(CONDITION) typename = std::enable_if_t<CONDITION>
+
 #define ENABLE_FN_IF_T(CONDITION) std::enable_if_t<CONDITION> *
 
 #define ENABLE_FN_IF(CONDITION) ENABLE_FN_IF_T(CONDITION) = nullptr
@@ -1173,6 +1203,10 @@ namespace mafox
 
 #endif // MAFOX_GMATRIX_INC
 
+#ifndef MAFOX_LEGENDRE_INC
+#define MAFOX_LEGENDRE_INC
+
+
 #ifndef MAFOX_LEGENDRE_H
 #define MAFOX_LEGENDRE_H
 
@@ -1375,6 +1409,8 @@ namespace mafox
         metaxxa::TypeOrRef<const T> eps = MAFOX_DEFAULT_EPS
     );
 
+    // TODO: Add async functions
+
     template 
     <
         typename T = double, 
@@ -1426,6 +1462,12 @@ namespace mafox
 
         template <typename RootsContainer = std::vector<T>>
         mafox_inline RootsContainer roots(metaxxa::TypeOrRef<const T> eps = MAFOX_DEFAULT_EPS);
+
+        // template <typename RootsContainer = std::vector<T>>
+        // mafox_inline std::future<RootsContainer &> roots_async(std::launch policy, RootsContainer &roots, metaxxa::TypeOrRef<const T> eps = MAFOX_DEFAULT_EPS);
+
+        template <typename RootsContainer = std::vector<T>>
+        mafox_inline std::future<RootsContainer> roots_async(std::launch policy, metaxxa::TypeOrRef<const T> eps = MAFOX_DEFAULT_EPS);
 
     private:
         IntT _power;
@@ -1842,6 +1884,29 @@ namespace mafox
     {
         return legendre_polynomial_roots<T, IntT, RootsContainer, Cache>(_power, cache, eps);
     }
+
+    // template <typename T, typename IntT, typename Cache>
+    // template <typename RootsContainer>
+    // mafox_inline std::future<RootsContainer &> MAFOX_SELF::roots_async
+    // (
+    //     std::launch policy, 
+    //     RootsContainer &roots, 
+    //     metaxxa::TypeOrRef<const T> eps
+    // )
+    // {
+    //     return std::async(policy, [](auto &roots, const auto &eps) { roots<RootsContainer>(roots, eps); }, std::ref(roots), obj_or_ref(eps));
+    // }
+
+    template <typename T, typename IntT, typename Cache>
+    template <typename RootsContainer>
+    mafox_inline std::future<RootsContainer> MAFOX_SELF::roots_async
+    (
+        std::launch policy, 
+        metaxxa::TypeOrRef<const T> eps
+    )
+    {
+        return std::async(policy, [this](const auto &eps) { roots<RootsContainer>(eps); }, obj_or_ref(eps));
+    }
 }
 
 #undef INLINE_MAFOX_LP
@@ -1849,6 +1914,8 @@ namespace mafox
 #undef MAFOX_SELF
 
 #undef ENABLE_IF_INT_POWER
+
+#endif // MAFOX_LEGENDRE_INC
 
 #ifndef MAFOX_GRIDFUNCTION_INC
 #define MAFOX_GRIDFUNCTION_INC
@@ -1966,6 +2033,84 @@ namespace mafox
 }
 
 #endif // MAFOX_GRIDFUNCTION_INC
+
+#ifndef MAFOX_INTEGRALSOLVER_INC
+#define MAFOX_INTEGRALSOLVER_INC
+
+
+#ifndef MAFOX_INTEGRALSOLVER_H
+#define MAFOX_INTEGRALSOLVER_H
+
+
+namespace mafox
+{
+    // >>> SKATCH: only for one variable <<<
+    struct IntegralSolver
+    {
+        template 
+        <
+            typename XT,
+            typename Function, 
+            typename NodesCount = unsigned int, 
+            typename Eps = double
+            // TODO: typename LegendreRootsContainer = std::vector<typename metaxxa::Function<Function>::Result>
+        >
+        static auto gaussian
+        (
+            const Function &f,
+            metaxxa::TypeOrRef<const XT> from,
+            metaxxa::TypeOrRef<const XT> to,
+            metaxxa::TypeOrRef<const NodesCount>, 
+            metaxxa::TypeOrRef<const Eps> = MAFOX_DEFAULT_EPS
+        );
+
+        // TODO: with cache
+    };
+
+}
+
+#endif // MAFOX_INTEGRALSOLVER_H
+
+
+namespace mafox
+{   
+    template <typename XT, typename Function, typename NodesCount, typename Eps>
+    auto IntegralSolver::gaussian
+    (
+        const Function &f, 
+        metaxxa::TypeOrRef<const XT> from,
+        metaxxa::TypeOrRef<const XT> to,
+        metaxxa::TypeOrRef<const NodesCount> nodes, 
+        metaxxa::TypeOrRef<const Eps> eps   
+    )
+    {
+        
+        using ResultT = double; // TODO Function::Result instead double
+
+        LegendrePolynomial<XT> polynomial(nodes);
+
+        // For variable replacing
+        auto k      = (to - from) / 2;
+        auto offset = (to + from) / 2;
+
+        auto roots = polynomial.roots(eps);
+
+        ResultT result = 0.0;
+        ResultT weight = 0.0;
+        ResultT derivative = 0.0;
+        for(std::size_t i = 0; i < nodes; ++i)
+        {
+            derivative = polynomial.derivative(roots[i]);
+            weight = 2.0/((1 - roots[i]*roots[i]) * derivative*derivative);
+
+            result += weight * f(k*roots[i] + offset);
+        }
+
+        return k*result;
+    }
+}
+
+#endif // MAFOX_INTEGRALSOLVER_INC
 
 #endif // MAFOX_H
 

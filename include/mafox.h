@@ -5,5 +5,6 @@
 #include "gmatrix.inc"
 #include "legendre.inc"
 #include "gridfunction.inc"
+#include "integralsolver.inc"
 
 #endif // MAFOX_H

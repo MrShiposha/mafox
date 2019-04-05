@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <vector>
+#include <future>
 
 #include "def.h"
 #include "legendrecachemanager.h"
@@ -169,6 +170,8 @@ namespace mafox
         metaxxa::TypeOrRef<const T> eps = MAFOX_DEFAULT_EPS
     );
 
+    // TODO: Add async functions
+
     template 
     <
         typename T = double, 
@@ -220,6 +223,12 @@ namespace mafox
 
         template <typename RootsContainer = std::vector<T>>
         mafox_inline RootsContainer roots(metaxxa::TypeOrRef<const T> eps = MAFOX_DEFAULT_EPS);
+
+        // template <typename RootsContainer = std::vector<T>>
+        // mafox_inline std::future<RootsContainer &> roots_async(std::launch policy, RootsContainer &roots, metaxxa::TypeOrRef<const T> eps = MAFOX_DEFAULT_EPS);
+
+        template <typename RootsContainer = std::vector<T>>
+        mafox_inline std::future<RootsContainer> roots_async(std::launch policy, metaxxa::TypeOrRef<const T> eps = MAFOX_DEFAULT_EPS);
 
     private:
         IntT _power;

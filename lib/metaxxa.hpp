@@ -25,6 +25,7 @@
 #define METAXXA_HPP
 
 #include <type_traits>
+#include <functional>
 #include <utility>
 
 #ifndef METAXXA_ISVALID_H
@@ -428,6 +429,7 @@ namespace metaxxa
 #define METAXXA_TYPEORREF_H
 
 
+
 namespace metaxxa
 {
     template <typename T>
@@ -436,6 +438,32 @@ namespace metaxxa
                 ::template Then<T>
                 ::template Else<T &>
                 ::Type;
+
+    template <typename T>
+    using TypeOrRefWrapper = typename 
+        If<sizeof(T) <= sizeof(T *)>
+                ::template Then<T>
+                ::template Else<std::reference_wrapper<T>>
+                ::Type;
+
+    template <typename T>
+    using TypeOrRefConstWrapper = typename 
+        If<sizeof(T) <= sizeof(T *)>
+                ::template Then<T>
+                ::template Else<std::reference_wrapper<const T>>
+                ::Type;
+
+    template <typename T>
+    auto obj_or_ref(T &obj)
+    {
+        return TypeOrRefWrapper<T>(obj);
+    }
+
+    template <typename T>
+    auto obj_or_cref(const T &obj)
+    {
+        return TypeOrRefConstWrapper<T>(obj);
+    }
 }
 
 #endif // METAXXA_TYPEORREF_H
@@ -797,6 +825,8 @@ namespace metaxxa
 #ifndef METAXXA_ENABLEFNIF_H
 #define METAXXA_ENABLEFNIF_H
 
+
+#define ENABLE_T_IF(CONDITION) typename = std::enable_if_t<CONDITION>
 
 #define ENABLE_FN_IF_T(CONDITION) std::enable_if_t<CONDITION> *
 
