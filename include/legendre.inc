@@ -3,6 +3,9 @@
 #include <vector>
 #include <utility>
 #include <cmath>
+#include <functional>
+
+#include "rootsolver.inc"
 
 #define ENABLE_IF_INT_POWER ENABLE_FN_IF_T(std::is_integral_v<IntT>)
 
@@ -189,6 +192,78 @@ namespace mafox
         return k*(lp_n1 - x * lp_n);
     }
 
+    template <typename T, typename IntT, typename RootsContainer>
+    void legendre_polynomial_roots
+    (
+        IntT power,
+        RootsContainer &roots,
+        metaxxa::TypeOrRef<const T> eps
+    )
+    {
+        return legendre_polynomial_roots<T, IntT, RootsContainer>(power, roots, detail::default_cache<T>, eps);
+    }
+
+    template 
+    <
+        typename T, 
+        typename IntT, 
+        typename RootsContainer, 
+        typename Cache
+    >
+    void legendre_polynomial_roots
+    (
+        IntT power,
+        RootsContainer &roots,
+        Cache &cache,
+        metaxxa::TypeOrRef<const T> eps
+    )
+    {
+        if(power == 0)
+            return;
+
+        LegendrePolynomial<T, IntT, Cache> polynomial(power, cache);
+        for(IntT i = 1; i <= power; ++i)
+        {
+            roots.push_back
+            (
+                RootSolver::newton
+                (
+                    polynomial, // TODO: LOOK AT CACHE!!!
+                    [&polynomial](auto x) { return polynomial.derivative(x); },
+                    cos(M_PI*(4*i - 1)/(4*power + 2)),
+                    eps
+                )
+            );
+        }
+    }
+
+    template <typename T, typename IntT, typename RootsContainer>
+    mafox_inline RootsContainer legendre_polynomial_roots(IntT power, metaxxa::TypeOrRef<const T> eps)
+    {
+        return legendre_polynomial_roots<T, IntT, RootsContainer>(power, detail::default_cache<T>, eps);
+    }
+
+    template 
+    <
+        typename T, 
+        typename IntT, 
+        typename RootsContainer,
+        typename Cache
+    >
+    mafox_inline RootsContainer legendre_polynomial_roots
+    (
+        IntT power, 
+        Cache &cache,
+        metaxxa::TypeOrRef<const T> eps
+    )
+    {
+        RootsContainer roots;
+
+        legendre_polynomial_roots<T, IntT, RootsContainer, Cache>(power, roots, cache, eps);
+
+        return roots;
+    }
+
     INLINE_MAFOX_LP()::LegendrePolynomial()
     : LegendrePolynomial(0)
     {}
@@ -229,12 +304,12 @@ namespace mafox
         return power(_power + 1);
     }
 
-    INLINE_MAFOX_LP(auto)::operator()(metaxxa::TypeOrRef<const T> x)
+    INLINE_MAFOX_LP(auto)::operator()(metaxxa::TypeOrRef<const T> x) const
     {
         return legendre_polynomial<T, IntT>(x, _power, cache);
     }
 
-    INLINE_MAFOX_LP(auto)::derivative(metaxxa::TypeOrRef<const T> x)
+    INLINE_MAFOX_LP(auto)::derivative(metaxxa::TypeOrRef<const T> x) const
     {
         if(_power == 0)
             return T(0);
@@ -261,7 +336,7 @@ namespace mafox
 
     template <typename T, typename IntT, typename Cache>
     template <typename LP_n, typename LP_n1>
-    mafox_inline auto LegendrePolynomial<T, IntT, Cache>::derivative
+    mafox_inline auto MAFOX_SELF::derivative
     (
         metaxxa::TypeOrRef<const T> x,
         metaxxa::TypeOrRef<const LP_n> lp_n,
@@ -269,6 +344,20 @@ namespace mafox
     ) const
     {
         return legendre_polynomial_derivative<T, IntT, LP_n, LP_n1>(x, _power, lp_n, lp_n1);
+    }
+
+    template <typename T, typename IntT, typename Cache>
+    template <typename RootsContainer>
+    mafox_inline void MAFOX_SELF::roots(RootsContainer &roots, metaxxa::TypeOrRef<const T> eps)
+    {
+        return legendre_polynomial_roots<T, IntT, RootsContainer, Cache>(_power, roots, cache, eps);
+    }
+
+    template <typename T, typename IntT, typename Cache>
+    template <typename RootsContainer>
+    mafox_inline RootsContainer MAFOX_SELF::roots(metaxxa::TypeOrRef<const T> eps)
+    {
+        return legendre_polynomial_roots<T, IntT, RootsContainer, Cache>(_power, cache, eps);
     }
 }
 

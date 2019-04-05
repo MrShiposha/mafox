@@ -2,6 +2,7 @@
 #define MAFOX_LEGENDRE_H
 
 #include <memory>
+#include <vector>
 
 #include "def.h"
 #include "legendrecachemanager.h"
@@ -116,6 +117,60 @@ namespace mafox
 
     template 
     <
+        typename T, 
+        typename IntT, 
+        typename RootsContainer
+    >
+    void legendre_polynomial_roots
+    (
+        IntT power,
+        RootsContainer &,
+        metaxxa::TypeOrRef<const T> eps = MAFOX_DEFAULT_EPS
+    );
+
+    template
+    <
+        typename T, 
+        typename IntT,
+        typename RootsContainer, 
+        typename Cache = typename LegendreCacheManager<T>::Type
+    >
+    void legendre_polynomial_roots
+    (
+        IntT power,
+        RootsContainer &,
+        Cache &cache,
+        metaxxa::TypeOrRef<const T> eps = MAFOX_DEFAULT_EPS
+    );
+
+    template 
+    <
+        typename T, 
+        typename IntT, 
+        typename RootsContainer
+    >
+    mafox_inline RootsContainer legendre_polynomial_roots
+    (
+        IntT power, 
+        metaxxa::TypeOrRef<const T> eps = MAFOX_DEFAULT_EPS
+    );
+
+    template 
+    <
+        typename T, 
+        typename IntT, 
+        typename RootsContainer,
+        typename Cache = typename LegendreCacheManager<T>::Type
+    >
+    mafox_inline RootsContainer legendre_polynomial_roots
+    (
+        IntT power,
+        Cache &cache,
+        metaxxa::TypeOrRef<const T> eps = MAFOX_DEFAULT_EPS
+    );
+
+    template 
+    <
         typename T = double, 
         typename IntT = int, 
         typename Cache = typename LegendreCacheManager<T>::Type
@@ -141,9 +196,9 @@ namespace mafox
 
         mafox_inline LegendrePolynomial &next_power();
 
-        mafox_inline auto operator()(metaxxa::TypeOrRef<const T> x);
+        mafox_inline auto operator()(metaxxa::TypeOrRef<const T> x) const;
 
-        mafox_inline auto derivative(metaxxa::TypeOrRef<const T> x);
+        mafox_inline auto derivative(metaxxa::TypeOrRef<const T> x) const;
 
         mafox_inline auto derivative
         (
@@ -160,9 +215,15 @@ namespace mafox
             metaxxa::TypeOrRef<const LP_n1> lp_n1
         ) const;
 
+        template <typename RootsContainer = std::vector<T>>
+        mafox_inline void roots(RootsContainer &roots, metaxxa::TypeOrRef<const T> eps = MAFOX_DEFAULT_EPS);
+
+        template <typename RootsContainer = std::vector<T>>
+        mafox_inline RootsContainer roots(metaxxa::TypeOrRef<const T> eps = MAFOX_DEFAULT_EPS);
+
     private:
         IntT _power;
-        Cache cache;
+        mutable Cache cache;
     };
 }
 

@@ -23,6 +23,8 @@
 
 #define MAFOX_NCPTR(PTR) const_cast<MAFOX_EXPAND(MAFOX_SELF)*>(PTR)
 
+#define MAFOX_DEFAULT_EPS 0.001
+
 namespace mafox
 {
     using Byte = unsigned char;
