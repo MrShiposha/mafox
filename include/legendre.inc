@@ -231,9 +231,8 @@ namespace mafox
             (
                 RootSolver::newton
                 (
-                    polynomial, // TODO: LOOK AT CACHE!!!
-                    [&polynomial](auto x) { return polynomial.derivative(x); },
-                    cos(M_PI*(4*i - 1)/(4*power + 2)),
+                    polynomial,
+                    i,
                     eps
                 )
             );
@@ -310,6 +309,11 @@ namespace mafox
     INLINE_MAFOX_LP(auto)::operator()(metaxxa::TypeOrRef<const T> x) const
     {
         return legendre_polynomial<T, IntT>(x, _power, cache);
+    }
+
+    INLINE_MAFOX_LP(auto)::pair(metaxxa::TypeOrRef<const T> x) const
+    {
+        return legendre_polynomial_pair<T, IntT>(x, _power, cache);
     }
 
     INLINE_MAFOX_LP(auto)::derivative(metaxxa::TypeOrRef<const T> x) const

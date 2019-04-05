@@ -25,6 +25,37 @@ namespace mafox
 
         return x1;
     }
+
+    template 
+    <
+        typename T,
+        typename IntT,
+        typename Cache
+    >
+    auto RootSolver::newton
+    (
+        const LegendrePolynomial<T, IntT, Cache> &polynomial,
+        IntT root_number,
+        const T &eps
+    )
+    {
+        T x0 = cos(M_PI*(4*root_number - 1)/(4*polynomial.power() + 2));
+
+        auto [p_n, p_n1] = polynomial.pair(x0);
+        auto dp_n = polynomial.derivative(x0, p_n, p_n1);
+
+        T x1 = x0 - p_n / dp_n;
+        while(std::abs(x1 - x0) >= eps)
+        {
+            std::tie(p_n, p_n1) = polynomial.pair(x1);
+            dp_n = polynomial.derivative(x1, p_n, p_n1);
+
+            x0 = x1;
+            x1 = x1 - p_n / dp_n;
+        }
+
+        return x1;
+    }
 }
 
 #endif // MAFOX_ROOTSOLVER_INC

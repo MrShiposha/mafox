@@ -2,6 +2,7 @@
 #define MAFOX_ROOTSOLVER_H
 
 #include "def.h"
+#include "legendre.h"
 
 namespace mafox
 {
@@ -14,6 +15,19 @@ namespace mafox
             const Function &function, 
             const Derivative &derivative, 
             T initial_guess, 
+            const T &eps = MAFOX_DEFAULT_EPS
+        );
+
+        template 
+        <
+            typename T,
+            typename IntT,
+            typename Cache
+        >
+        static auto newton
+        (
+            const LegendrePolynomial<T, IntT, Cache> &polynomial,
+            IntT root_number,
             const T &eps = MAFOX_DEFAULT_EPS
         );
     };

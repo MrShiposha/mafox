@@ -201,6 +201,8 @@ namespace mafox
 
         mafox_inline auto operator()(metaxxa::TypeOrRef<const T> x) const;
 
+        mafox_inline auto pair(metaxxa::TypeOrRef<const T> x) const;
+
         mafox_inline auto derivative(metaxxa::TypeOrRef<const T> x) const;
 
         mafox_inline auto derivative
