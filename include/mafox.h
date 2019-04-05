@@ -4,5 +4,6 @@
 #include "def.h"
 #include "gmatrix.inc"
 #include "legendre.inc"
+#include "gridfunction.inc"
 
 #endif // MAFOX_H

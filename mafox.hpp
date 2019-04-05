@@ -10,6 +10,8 @@
 #include <vector>
 #include <cmath>
 #include <functional>
+#include <tuple>
+#include <initializer_list>
 
 #ifndef MAFOX_H
 #define MAFOX_H
@@ -1847,6 +1849,123 @@ namespace mafox
 #undef MAFOX_SELF
 
 #undef ENABLE_IF_INT_POWER
+
+#ifndef MAFOX_GRIDFUNCTION_INC
+#define MAFOX_GRIDFUNCTION_INC
+
+
+#ifndef MAFOX_GRIDFUNCTION_H
+#define MAFOX_GRIDFUNCTION_H
+
+
+
+namespace mafox
+{
+    namespace detail
+    {
+        template <typename... Args>
+        using TupleT = std::tuple<Args...>;
+
+        template <typename T>
+        using TupleContainerT = std::vector<T>;
+
+        template <typename... Args>
+        struct GridNodeArgs
+        {
+            mafox_inline explicit GridNodeArgs(Args&&... args);
+
+            template <typename Value>
+            mafox_inline TupleT<Args..., Value> operator=(const Value &) const;
+
+            TupleT<Args...> args;
+        };
+    }
+    
+    template <typename... Args>
+    mafox_inline detail::GridNodeArgs<Args...> f(Args&&... args);
+
+    template <typename Fn>
+    class GridFunction : public GridFunction<decltype(&Fn::operator())>
+    {};
+
+    template <typename Value, typename... Args>
+    class GridFunction<Value(Args...)>
+    {
+    public:
+        mafox_inline GridFunction();
+
+        mafox_inline GridFunction(std::initializer_list<detail::TupleT<Args..., Value>>);
+
+        mafox_inline auto &node(std::size_t index);
+
+        mafox_inline const auto &node(std::size_t index) const;
+
+        mafox_inline std::size_t nodes_count() const;
+
+
+    private:
+        detail::TupleContainerT<detail::TupleT<Args..., Value>> nodes;
+    };
+}
+
+#endif // MAFOX_GRIDFUNCTION_H
+
+namespace mafox
+{
+    namespace detail
+    {
+        template <typename... Args>
+        mafox_inline GridNodeArgs<Args...>::GridNodeArgs(Args&&... args)
+        : args(std::forward<Args>(args)...)
+        {}
+
+        template <typename... Args>
+        template <typename Value>
+        mafox_inline TupleT<Args..., Value> GridNodeArgs<Args...>::operator=(const Value &value) const
+        {
+            return std::tuple_cat(args, TupleT<Value>(value));
+        }
+    }
+
+    template <typename... Args>
+    mafox_inline detail::GridNodeArgs<Args...> f(Args&&... args)
+    {
+        return detail::GridNodeArgs<Args...>(std::forward<Args>(args)...);
+    }
+
+    template <typename Value, typename... Args>
+    mafox_inline GridFunction<Value(Args...)>::GridFunction()
+    {}
+
+    template <typename Value, typename... Args>
+    mafox_inline GridFunction<Value(Args...)>::GridFunction(std::initializer_list<detail::TupleT<Args..., Value>> list)
+    : nodes(list)
+    {}
+
+    template <typename Value, typename... Args>
+    mafox_inline auto &GridFunction<Value(Args...)>::node(std::size_t index)
+    {
+        assert(index < nodes.size());
+
+        return nodes[index];
+    }
+
+    template <typename Value, typename... Args>
+    mafox_inline const auto &GridFunction<Value(Args...)>::node(std::size_t index) const
+    {
+        return const_cast<GridFunction<Value(Args...)>*>(this)->node(index);
+    }
+
+    template <typename Value, typename... Args>
+    mafox_inline std::size_t GridFunction<Value(Args...)>::nodes_count() const
+    {
+        return nodes.size();
+    }
+
+    // TODO: deduction guides for GridFunction
+}
+
+#endif // MAFOX_GRIDFUNCTION_INC
 
 #endif // MAFOX_H
 

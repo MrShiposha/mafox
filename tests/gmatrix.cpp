@@ -1,6 +1,6 @@
 #include "tests.h"
 
-TEST_CASE("Creation", "[mafox::GMatrix]")
+TEST_CASE("matrix creation", "[mafox::GMatrix]")
 {
     SECTION("Matrix 1x1")
     {
@@ -28,7 +28,7 @@ TEST_CASE("Creation", "[mafox::GMatrix]")
     }
 }
 
-TEST_CASE("Assign", "[mafox::GMatrix]")
+TEST_CASE("matrix assign", "[mafox::GMatrix]")
 {
     SECTION("Matrix = Matrix")
     {
