@@ -35,12 +35,10 @@ namespace mafox
     auto RootSolver::newton
     (
         const LegendrePolynomial<T, IntT, Cache> &polynomial,
-        IntT root_number,
+        T x0,
         const T &eps
     )
     {
-        T x0 = cos(M_PI*(4*root_number - 1)/(4*polynomial.power() + 2));
-
         auto [p_n, p_n1] = polynomial.pair(x0);
         auto dp_n = polynomial.derivative(x0, p_n, p_n1);
 

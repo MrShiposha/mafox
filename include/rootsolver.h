@@ -27,7 +27,7 @@ namespace mafox
         static auto newton
         (
             const LegendrePolynomial<T, IntT, Cache> &polynomial,
-            IntT root_number,
+            T initial_guess,
             const T &eps = MAFOX_DEFAULT_EPS
         );
     };

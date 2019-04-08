@@ -232,7 +232,7 @@ namespace mafox
                 RootSolver::newton
                 (
                     polynomial,
-                    i,
+                    cos(M_PI*(4*i - 1)/(4*power + 2)),
                     eps
                 )
             );
