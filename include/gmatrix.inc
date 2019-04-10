@@ -5,6 +5,11 @@
 
 #include <cstring>
 
+#ifdef _MSC_VER
+#   pragma warning(push)
+#   pragma warning(disable: 4003)
+#endif // _MSC_VER
+
 #define MAFOX_SELF GMatrix<T, Allocator>
 
 #define MAFOX_GMATRIX(ReturnType) \
@@ -181,6 +186,10 @@ namespace mafox
             t_data[j*_cols + i] = value;
     }
 }
+
+#ifdef _MSC_VER
+#   pragma warning(pop)
+#endif // _MSC_VER
 
 #undef MAFOX_GMATRIX
 #undef MAFOX_SELF

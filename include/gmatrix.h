@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <memory>
 
-#include "matrixalllocator.h"
 #include "def.h"
 
 #include "orientation.h"
@@ -21,7 +20,7 @@ namespace mafox
     template 
     <
         typename T,
-        typename Allocator = MatrixAllocator<T>
+        typename Allocator = std::allocator<T>
     >
     struct GMatrix
     {

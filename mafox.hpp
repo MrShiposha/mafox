@@ -9,7 +9,6 @@
 #include <cstdint>
 #include <memory>
 #include <vector>
-#include <cmath>
 #include <future>
 #include <tuple>
 #include <initializer_list>
@@ -895,57 +894,6 @@ namespace mafox
 
 
 
-#ifndef MAFOX_MATRIXALLOCATOR_H
-#define MAFOX_MATRIXALLOCATOR_H
-
-
-namespace mafox
-{
-    template <typename T>
-    struct MatrixAllocator
-    {
-        using Type = T;
-        using Traits = std::allocator_traits<MatrixAllocator<T>>;
-
-        using value_type      = Type;
-        using size_type       = typename std::allocator<T>::size_type;
-        using difference_type = typename std::allocator<T>::difference_type;
-        using pointer         = typename std::allocator<T>::pointer;
-        using const_pointer   = typename std::allocator<T>::const_pointer;
-        using reference       = typename std::allocator<T>::reference;
-        using const_reference = typename std::allocator<T>::const_reference;
-
-        template<class U> struct rebind 
-        {
-            using other = MatrixAllocator<U>; 
-        };
-
-        template<class U, class... Args> 
-        void construct(U* p, Args&&... args);
-        
-        template<class U> void destroy(U* p);
-
-        MatrixAllocator() = default;
-
-        template <typename U>
-        MatrixAllocator(const MatrixAllocator<U> &);
-
-        T *allocate(std::size_t);
-
-        T *reallocate(T *, std::size_t);
-
-        void deallocate(T *, std::size_t);
-    };
-}
-
-template <typename T, typename U>
-bool operator==(const mafox::MatrixAllocator<T> &, const mafox::MatrixAllocator<U> &);
-
-template <typename T, typename U>
-bool operator!=(const mafox::MatrixAllocator<T> &, const mafox::MatrixAllocator<U> &);
-
-#endif // MAFOX_MATRIXALLOCATOR_H
-
 
 #ifndef MAFOX_ORIENTATION_H
 #define MAFOX_ORIENTATION_H
@@ -972,7 +920,7 @@ namespace mafox
     template 
     <
         typename T,
-        typename Allocator = MatrixAllocator<T>
+        typename Allocator = std::allocator<T>
     >
     struct GMatrix
     {
@@ -1020,6 +968,11 @@ namespace mafox
 
 #endif // MAFOX_DETAIL_GMATRIX_H
 
+
+#ifdef _MSC_VER
+#   pragma warning(push)
+#   pragma warning(disable: 4003)
+#endif // _MSC_VER
 
 #define MAFOX_SELF GMatrix<T, Allocator>
 
@@ -1198,6 +1151,10 @@ namespace mafox
     }
 }
 
+#ifdef _MSC_VER
+#   pragma warning(pop)
+#endif // _MSC_VER
+
 #undef MAFOX_GMATRIX
 #undef MAFOX_SELF
 
@@ -1212,91 +1169,15 @@ namespace mafox
 
 
 
-#ifndef MAFOX_LEGENDREСACHEMANAGER_H
-#define MAFOX_LEGENDREСACHEMANAGER_H
-
-namespace mafox
-{
-    struct DefaultLegendreCache;
-
-    // Legendre Сoefficient Cache Manager
-    // You can declare you own specialization for type T
-    // (e.g. using Type = MyLCacheClass)
-    // 
-    // Let 
-    //      BoolT = any type, that can be casted to bool
-    //      IntT = see legendre.h
-    //      
-    //      n = power of legendre polynomial
-    //      alpha = (2*n - 1)/n
-    //      beta  = (n-1)/n
-    // MyLCacheClass must have following members:
-    //      * BoolT is_in_cache(IntT power) const // is coefficients for power in cache?
-    //
-    //      * void store(IntT power, double alpha, double beta) // store power, alpha and beta in cache 
-    //
-    //      * double alpha(IntT power) const
-    //
-    //      * double beta(IntT power) const
-    template <typename T>
-    struct LegendreCacheManager
-    {
-        using Type = DefaultLegendreCache;
-    };
-}
-
-#endif // MAFOX_LEGENDREСACHEMANAGER_H
-
 #define ENABLE_IF_INT_POWER ENABLE_FN_IF(std::is_integral_v<IntT>)
 
 namespace mafox
 {
-    namespace detail
-    {
-        class DefaultLegendreCache;
-    }
-
-    struct DefaultLegendreCache
-    {
-        mafox_inline DefaultLegendreCache();
-
-        mafox_inline DefaultLegendreCache(const DefaultLegendreCache &);
-
-        mafox_inline DefaultLegendreCache(DefaultLegendreCache &&);
-
-        // Is power in cache?
-        template <typename IntT>
-        mafox_inline bool is_in_cache(IntT power, ENABLE_IF_INT_POWER) const noexcept;
-
-        template <typename IntT>
-        mafox_inline void store(IntT power, double alpha, double beta, ENABLE_IF_INT_POWER);
-
-        // Returns (2*power - 1)/power
-        template <typename IntT>
-        mafox_inline double alpha(IntT power, ENABLE_IF_INT_POWER) const; 
-
-        // Returns (power - 1)/power
-        template <typename IntT>
-        mafox_inline double beta(IntT power, ENABLE_IF_INT_POWER) const;
-
-    private:
-        std::unique_ptr<detail::DefaultLegendreCache> self;
-    };
-
     template <typename T, typename IntT>
     mafox_inline auto legendre_polynomial
     (
         metaxxa::TypeOrRef<const T> x,
         IntT power, 
-        ENABLE_IF_INT_POWER
-    );
-
-    template <typename T, typename IntT, typename Cache = typename LegendreCacheManager<T>::Type>
-    mafox_inline auto legendre_polynomial
-    (
-        metaxxa::TypeOrRef<const T> x,
-        IntT power,
-        Cache &,
         ENABLE_IF_INT_POWER
     );
 
@@ -1306,93 +1187,41 @@ namespace mafox
     (
         metaxxa::TypeOrRef<const T> x,
         IntT power, 
-        ENABLE_IF_INT_POWER
-    );
-
-    // Returns std::pair of P_n(x) P_{n-1}(x)
-    template <typename T, typename IntT, typename Cache = typename LegendreCacheManager<T>::Type>
-    auto legendre_polynomial_pair
-    (
-        metaxxa::TypeOrRef<const T> x,
-        IntT power,
-        Cache &,
         ENABLE_IF_INT_POWER
     );
 
     // LP means Legendre Polynomial
     // In LaTeX:
-    //      $$ LP_n1 is P_{n-1}(x) $$
-    //      $$ LP_n2 is P_{n-2}(x) $$
+    //      $$ CurrentLP is P_n(x)      $$
+    //      $$ PreviousLP is P_{n-1}(x) $$
     template 
     <
         typename T, 
         typename IntT, 
-        typename LP_n1, 
-        typename LP_n2, 
-        typename Cache = typename LegendreCacheManager<T>::Type
+        typename CurrentLP, 
+        typename PreviousLP
     >
     mafox_inline auto legendre_polynomial_next
     (
         metaxxa::TypeOrRef<const T> x,
         IntT power,
-        metaxxa::TypeOrRef<const LP_n1> lp_n1,
-        metaxxa::TypeOrRef<const LP_n2> lp_n2,
-        Cache &,
+        metaxxa::TypeOrRef<const CurrentLP>,
+        metaxxa::TypeOrRef<const PreviousLP>,
         ENABLE_IF_INT_POWER
     );
 
     // LP means Legendre Polynomial
     // In LaTeX:
-    //      $$ LP_n is P_n(x) $$
-    //      $$ LP_n1 is P_{n-1}(x) $$
-    template <typename T, typename IntT, typename LP_n, typename LP_n1>
+    //      $$ CurrentLP is P_n(x)      $$
+    //      $$ PreviousLP is P_{n-1}(x) $$
+    template <typename T, typename IntT, typename CurrentLP, typename PreviousLP>
     mafox_inline auto legendre_polynomial_derivative
     (
         metaxxa::TypeOrRef<const T> x,
         IntT power,
-        metaxxa::TypeOrRef<LP_n> lp_n,
-        metaxxa::TypeOrRef<const LP_n1> lp_n1,
+        metaxxa::TypeOrRef<const CurrentLP>,
+        metaxxa::TypeOrRef<const PreviousLP>,
         ENABLE_IF_INT_POWER
-    );
-
-    template 
-    <
-        typename T, 
-        typename IntT, 
-        typename RootsContainer
-    >
-    void legendre_polynomial_roots
-    (
-        IntT power,
-        RootsContainer &,
-        metaxxa::TypeOrRef<const T> eps = MAFOX_DEFAULT_EPS
-    );
-
-    template
-    <
-        typename T, 
-        typename IntT,
-        typename RootsContainer, 
-        typename Cache = typename LegendreCacheManager<T>::Type
-    >
-    void legendre_polynomial_roots
-    (
-        IntT power,
-        RootsContainer &,
-        Cache &cache,
-        metaxxa::TypeOrRef<const T> eps = MAFOX_DEFAULT_EPS
-    );
-
-    template 
-    <
-        typename T, 
-        typename IntT, 
-        typename RootsContainer
-    >
-    mafox_inline RootsContainer legendre_polynomial_roots
-    (
-        IntT power, 
-        metaxxa::TypeOrRef<const T> eps = MAFOX_DEFAULT_EPS
     );
 
     template 
@@ -1400,37 +1229,39 @@ namespace mafox
         typename T, 
         typename IntT, 
         typename RootsContainer,
-        typename Cache = typename LegendreCacheManager<T>::Type
+        typename Eps = T
     >
-    mafox_inline RootsContainer legendre_polynomial_roots
+    void legendre_polynomial_roots
     (
         IntT power,
-        Cache &cache,
-        metaxxa::TypeOrRef<const T> eps = MAFOX_DEFAULT_EPS
+        RootsContainer &,
+        metaxxa::TypeOrRef<const Eps> eps = MAFOX_DEFAULT_EPS
     );
 
-    // TODO: Add async functions
+    template 
+    <
+        typename T, 
+        typename IntT, 
+        typename RootsContainer,
+        typename Eps = T
+    >
+    RootsContainer legendre_polynomial_roots
+    (
+        IntT power,
+        metaxxa::TypeOrRef<const Eps> eps = MAFOX_DEFAULT_EPS
+    );
 
     template 
     <
         typename T = double, 
-        typename IntT = int, 
-        typename Cache = typename LegendreCacheManager<T>::Type
+        typename IntT = int
     >
     class LegendrePolynomial
     {
     public:
         mafox_inline LegendrePolynomial();
 
-        mafox_inline LegendrePolynomial(const Cache &cache);
-
-        mafox_inline LegendrePolynomial(Cache &&cache);
-
         mafox_inline LegendrePolynomial(IntT power);
-
-        mafox_inline LegendrePolynomial(IntT power, const Cache &cache);
-
-        mafox_inline LegendrePolynomial(IntT power, Cache &&cache);
 
         mafox_inline LegendrePolynomial &power(IntT p);
 
@@ -1444,36 +1275,14 @@ namespace mafox
 
         mafox_inline auto derivative(metaxxa::TypeOrRef<const T> x) const;
 
-        mafox_inline auto derivative
-        (
-            metaxxa::TypeOrRef<const T> x,
-            metaxxa::TypeOrRef<const T> lp_n,
-            metaxxa::TypeOrRef<const T> lp_n1
-        ) const;
-
-        template <typename LP_n, typename LP_n1>
-        mafox_inline auto derivative
-        (
-            metaxxa::TypeOrRef<const T> x,
-            metaxxa::TypeOrRef<const LP_n> lp_n,
-            metaxxa::TypeOrRef<const LP_n1> lp_n1
-        ) const;
-
         template <typename RootsContainer = std::vector<T>>
         mafox_inline void roots(RootsContainer &roots, metaxxa::TypeOrRef<const T> eps = MAFOX_DEFAULT_EPS);
 
         template <typename RootsContainer = std::vector<T>>
         mafox_inline RootsContainer roots(metaxxa::TypeOrRef<const T> eps = MAFOX_DEFAULT_EPS);
 
-        // template <typename RootsContainer = std::vector<T>>
-        // mafox_inline std::future<RootsContainer &> roots_async(std::launch policy, RootsContainer &roots, metaxxa::TypeOrRef<const T> eps = MAFOX_DEFAULT_EPS);
-
-        template <typename RootsContainer = std::vector<T>>
-        mafox_inline std::future<RootsContainer> roots_async(std::launch policy, metaxxa::TypeOrRef<const T> eps = MAFOX_DEFAULT_EPS);
-
     private:
         IntT _power;
-        mutable Cache cache;
     };
 }
 
@@ -1482,181 +1291,30 @@ namespace mafox
 #endif // MAFOX_LEGENDRE_H
 
 
+#define _USE_MATH_DEFINES 
+#include <math.h>
+#include <cmath>
+#include <functional>
 
-#ifndef MAFOX_ROOTSOLVER_INC
-#define MAFOX_ROOTSOLVER_INC
-
-
-#ifndef MAFOX_ROOTSOLVER_H
-#define MAFOX_ROOTSOLVER_H
-
-
-namespace mafox
-{
-    // >>> SKATCH: only for function with one variable <<<
-    struct RootSolver
-    {
-        template <typename T, typename Function, typename Derivative>
-        static auto newton
-        (
-            const Function &function, 
-            const Derivative &derivative, 
-            T initial_guess, 
-            const T &eps = MAFOX_DEFAULT_EPS
-        );
-
-        template 
-        <
-            typename T,
-            typename IntT,
-            typename Cache
-        >
-        static auto newton
-        (
-            const LegendrePolynomial<T, IntT, Cache> &polynomial,
-            T initial_guess,
-            const T &eps = MAFOX_DEFAULT_EPS
-        );
-    };
-}
-
-#endif // MAFOX_ROOTSOLVER_H
-
-
-namespace mafox
-{
-    template <typename T, typename Function, typename Derivative>
-    auto RootSolver::newton
-    (
-        const Function &function, 
-        const Derivative &derivative, 
-        T x0, 
-        const T &eps
-    )
-    {
-        T x1 = x0 - function(x0) / derivative(x0);
-        while(std::abs(x1 - x0) >= eps)
-        {
-            x0 = x1;
-            x1 = x1 - function(x1) / derivative(x1);
-        }
-
-        return x1;
-    }
-
-    template 
-    <
-        typename T,
-        typename IntT,
-        typename Cache
-    >
-    auto RootSolver::newton
-    (
-        const LegendrePolynomial<T, IntT, Cache> &polynomial,
-        T x0,
-        const T &eps
-    )
-    {
-        auto [p_n, p_n1] = polynomial.pair(x0);
-        auto dp_n = polynomial.derivative(x0, p_n, p_n1);
-
-        T x1 = x0 - p_n / dp_n;
-        while(std::abs(x1 - x0) >= eps)
-        {
-            std::tie(p_n, p_n1) = polynomial.pair(x1);
-            dp_n = polynomial.derivative(x1, p_n, p_n1);
-
-            x0 = x1;
-            x1 = x1 - p_n / dp_n;
-        }
-
-        return x1;
-    }
-}
-
-#endif // MAFOX_ROOTSOLVER_INC
+#ifdef _MSC_VER
+#   pragma warning(push)
+#   pragma warning(disable: 4003)
+#endif // _MSC_VER
 
 #define ENABLE_IF_INT_POWER ENABLE_FN_IF_T(std::is_integral_v<IntT>)
 
-#define MAFOX_SELF LegendrePolynomial<T, IntT, Cache>
+#define MAFOX_SELF LegendrePolynomial<T, IntT>
     
 #define MAFOX_LP(ReturnType) \
-    template <typename T, typename IntT, typename Cache> \
+    template <typename T, typename IntT> \
     ReturnType MAFOX_EXPAND(MAFOX_SELF)
 
 #define INLINE_MAFOX_LP(ReturnType) \
-    template <typename T, typename IntT, typename Cache> \
+    template <typename T, typename IntT> \
     MAFOX_EXPAND(mafox_inline) ReturnType MAFOX_EXPAND(MAFOX_SELF)
 
 namespace mafox
 {
-    namespace detail
-    {
-        class DefaultLegendreCache
-        {
-        public:
-            using Alpha = double;
-            using Beta  = double;
-
-            std::vector<std::pair<Alpha, Beta>> cache;
-        };
-
-        template <typename T>
-        static inline typename LegendreCacheManager<T>::Type default_cache;
-    }
-
-    mafox_inline DefaultLegendreCache::DefaultLegendreCache()
-    : self(new detail::DefaultLegendreCache())
-    {
-        self->cache.push_back(std::make_pair(std::nan("Legendre alpha for n == 0"), std::nan("Legendre beta for n == 0")));
-        self->cache.push_back(std::make_pair(1., 0.));
-    }
-
-    mafox_inline DefaultLegendreCache::DefaultLegendreCache(const DefaultLegendreCache &other)
-    : self(new detail::DefaultLegendreCache())
-    {
-        self->cache = other.self->cache;
-    }
-
-    mafox_inline DefaultLegendreCache::DefaultLegendreCache(DefaultLegendreCache &&other)
-    : self(std::move(other.self))
-    {}
-
-    template <typename IntT>
-    mafox_inline bool DefaultLegendreCache::is_in_cache(IntT power, ENABLE_IF_INT_POWER) const noexcept
-    {
-        return self->cache.size() > power;
-    }
-
-    template <typename IntT>
-    mafox_inline void DefaultLegendreCache::store(IntT power, double alpha, double beta, ENABLE_IF_INT_POWER)
-    {
-        if(is_in_cache(power))
-            self->cache[power] = std::make_pair(alpha, beta);
-        else
-        {
-            assert(power == self->cache.size() && "INTERNAL ERROR: DefaultLegendreCache can't store nonlinear");
-
-            self->cache.push_back(std::make_pair(alpha, beta));
-        }
-    }
-
-    template <typename IntT>
-    mafox_inline double DefaultLegendreCache::alpha(IntT power, ENABLE_IF_INT_POWER) const
-    {
-        assert(is_in_cache(power));
-
-        return self->cache[power].first;
-    }
-
-    template <typename IntT>
-    mafox_inline double DefaultLegendreCache::beta(IntT power, ENABLE_IF_INT_POWER) const
-    {
-        assert(is_in_cache(power));
-
-        return self->cache[power].second;
-    }
-
     template <typename T, typename IntT>
     mafox_inline auto legendre_polynomial
     (
@@ -1665,90 +1323,59 @@ namespace mafox
         ENABLE_IF_INT_POWER
     )
     {
-        return legendre_polynomial<T, IntT>(x, power, detail::default_cache<T>);
-    }
-
-    template <typename T, typename IntT, typename Cache>
-    mafox_inline auto legendre_polynomial
-    (
-        metaxxa::TypeOrRef<const T> x,
-        IntT power, 
-        Cache &cache,
-        ENABLE_IF_INT_POWER
-    )
-    {
-        return legendre_polynomial_pair<T, IntT>(x, power, cache).first;
+        return legendre_polynomial_pair<T, IntT>(x, power).first;
     }
 
     template <typename T, typename IntT>
-    auto legendre_polynomial_pair
-    (
-        metaxxa::TypeOrRef<const T> x,
-        IntT power, 
-        ENABLE_IF_INT_POWER
-    )
-    {
-        return legendre_polynomial_pair<T, IntT>(x, power, detail::default_cache<T>);
-    }
-
-    template <typename T, typename IntT, typename Cache>
     auto legendre_polynomial_pair
     (
         metaxxa::TypeOrRef<const T> x,
         IntT power,
-        Cache &cache,
         ENABLE_IF_INT_POWER
     )
     {
         assert(power >= 0);
-        
-        if(power == 0)
-            return std::pair<T, T>(1.0, std::nan("Result of Legendre polynomial of power -1"));
-        else if(power == 1)
-            return std::pair<T, T>(x, 1.0);
+        assert(-1.0 < x && x < 1.0);
 
-        // Start from power (n) == 2
-        T pl_n1     = x;   // P_{n-1}(x) (now P_1(x))
-        T pl_n2     = 1.0; // P_{n-2}(x) (now P_0(x))
-        T old_pl_n1 = 0.0; // 0.0 is for init value
+        if(power == 0)
+            return std::pair<T, T>(T(1.0), T(std::nan("Result of Legendre polynomial of power -1")));
+        else if(power == 1)
+            return std::pair<T, T>(x, T(1.0));
+
+        std::pair<T, T> pair(x /*= P_1(x)*/, T(1.0) /*= P_0(x)*/);
 
         // i <= power: for pl_n1 == P_power at end of cycle
-        for(IntT i = 2; i <= power; ++i)
+        for(IntT i = 1; i < power; ++i)
         {
-            old_pl_n1 = pl_n1;
-            pl_n1 = legendre_polynomial_next<T, IntT, T, T>(x, i, pl_n1, pl_n2, cache);
-            pl_n2 = old_pl_n1;
+            std::swap(pair.first, pair.second);
+            pair.first = legendre_polynomial_next<T, IntT, T, T>(x, i, pair.second, pair.first);
         }
 
-        return std::make_pair(pl_n1, pl_n2);
+        return pair;
     }
 
-    template <typename T, typename IntT, typename LP_n1, typename LP_n2, typename Cache>
+    template <typename T, typename IntT, typename CurrentLP = T, typename PreviousLP = T>
     mafox_inline auto legendre_polynomial_next
     (
         metaxxa::TypeOrRef<const T> x,
         IntT power,
-        metaxxa::TypeOrRef<const LP_n1> lp_n1,
-        metaxxa::TypeOrRef<const LP_n2> lp_n2,
-        Cache &cache,
+        metaxxa::TypeOrRef<const CurrentLP> cur_lp,
+        metaxxa::TypeOrRef<const PreviousLP> prev_lp,
         ENABLE_IF_INT_POWER
     )
     {
         assert(power >= 0);
 
-        if(!cache.is_in_cache(power))
-            cache.store(power, (2*power - 1)/static_cast<T>(power), (power - 1)/static_cast<T>(power));
-        
-        return cache.alpha(power) * x * lp_n1 - cache.beta(power)*lp_n2;
+        return ((2*power + 1) * x * cur_lp - power * prev_lp) / (power + 1);
     }
 
-    template <typename T, typename IntT, typename LP_n, typename LP_n1>
+    template <typename T, typename IntT, typename CurrentLP = T, typename PreviousLP = T>
     mafox_inline auto legendre_polynomial_derivative
     (
         metaxxa::TypeOrRef<const T> x,
         IntT power,
-        metaxxa::TypeOrRef<LP_n> lp_n,
-        metaxxa::TypeOrRef<const LP_n1> lp_n1,
+        metaxxa::TypeOrRef<const CurrentLP> cur_lp,
+        metaxxa::TypeOrRef<const PreviousLP> prev_lp,
         ENABLE_IF_INT_POWER
     )
     {
@@ -1757,58 +1384,77 @@ namespace mafox
         if(power == 0)
             return T(0);
 
-        const T k = power/(1 - x*x);
-        return k*(lp_n1 - x * lp_n);
+        return power*(prev_lp - x * cur_lp) / (1 - x*x);
     }
 
-    template <typename T, typename IntT, typename RootsContainer>
+    template <typename T, typename IntT, typename RootsContainer, typename Eps>
     void legendre_polynomial_roots
     (
         IntT power,
         RootsContainer &roots,
-        metaxxa::TypeOrRef<const T> eps
-    )
-    {
-        return legendre_polynomial_roots<T, IntT, RootsContainer>(power, roots, detail::default_cache<T>, eps);
-    }
-
-    template 
-    <
-        typename T, 
-        typename IntT, 
-        typename RootsContainer, 
-        typename Cache
-    >
-    void legendre_polynomial_roots
-    (
-        IntT power,
-        RootsContainer &roots,
-        Cache &cache,
-        metaxxa::TypeOrRef<const T> eps
+        metaxxa::TypeOrRef<const Eps> eps
     )
     {
         if(power == 0)
             return;
 
-        LegendrePolynomial<T, IntT, Cache> polynomial(power, cache);
-        for(IntT i = 1; i <= power; ++i)
-        {
-            roots.push_back
-            (
-                RootSolver::newton
-                (
-                    polynomial,
-                    cos(M_PI*(4*i - 1)/(4*power + 2)),
-                    eps
-                )
-            );
-        }
-    }
+        roots.resize(power);
 
-    template <typename T, typename IntT, typename RootsContainer>
-    mafox_inline RootsContainer legendre_polynomial_roots(IntT power, metaxxa::TypeOrRef<const T> eps)
-    {
-        return legendre_polynomial_roots<T, IntT, RootsContainer>(power, detail::default_cache<T>, eps);
+        if(power == 1)
+        {
+            roots[0] = T(0.0);
+            return;
+        }
+
+        IntT root_i = 0;
+        auto div = std::div(power, 2);
+        IntT end_i = static_cast<IntT>(div.quot);
+        
+        auto ceil_q = div.quot;
+        IntT neg_root_offset = 1;
+
+        if(div.rem != 0)
+        {
+            roots[div.quot] = T(0.0);
+            
+            ++ceil_q;
+            --neg_root_offset;
+            ++root_i;
+            ++end_i;
+        }
+
+        T guess(0.0), root(0.0);
+        T theta(0.0);
+        T p_n(0.0), p_n1(0.0), dp_n(0.0);
+
+        IntT power3 = 8*power*power*power;
+        auto k1 = 1.0 - (power - 1.0)/power3;
+        auto k2 = 1.0/(48*power3*power);
+        auto theta_dem = 4*power + 2;
+
+        for(; root_i < end_i; ++root_i)
+        {
+            theta = M_PI*(4*(ceil_q - root_i) - 1)/theta_dem;
+            auto sine = sin(theta);
+            sine *= sine;
+
+            guess = (k1 - k2*(39.0 - 28.0/sine))*cos(theta);
+            std::tie(p_n, p_n1) = legendre_polynomial_pair<T, IntT>(guess, power);
+            dp_n = legendre_polynomial_derivative<T, IntT>(guess, power, p_n, p_n1);
+
+            root = guess - p_n / dp_n;
+            while(std::abs(root - guess) >= eps)
+            {
+                std::tie(p_n, p_n1) = legendre_polynomial_pair<T, IntT>(root, power);
+                dp_n = legendre_polynomial_derivative<T, IntT>(root, power, p_n, p_n1);
+
+                guess = root;
+                root = guess - p_n / dp_n;
+            }
+
+            roots[div.quot + root_i] = root;
+            roots[div.quot - root_i - neg_root_offset] = -root;
+        }
     }
 
     template 
@@ -1816,44 +1462,28 @@ namespace mafox
         typename T, 
         typename IntT, 
         typename RootsContainer,
-        typename Cache
+        typename Eps
     >
-    mafox_inline RootsContainer legendre_polynomial_roots
+    RootsContainer legendre_polynomial_roots
     (
-        IntT power, 
-        Cache &cache,
-        metaxxa::TypeOrRef<const T> eps
+        IntT power,
+        metaxxa::TypeOrRef<const Eps> eps
     )
     {
-        RootsContainer roots;
+        RootsContainer container;
 
-        legendre_polynomial_roots<T, IntT, RootsContainer, Cache>(power, roots, cache, eps);
+        legendre_polynomial_roots<T, IntT, RootsContainer, Eps>(power, container, eps);
 
-        return roots;
+        return container;
     }
+
 
     INLINE_MAFOX_LP()::LegendrePolynomial()
     : LegendrePolynomial(0)
     {}
 
-    INLINE_MAFOX_LP()::LegendrePolynomial(const Cache &cache)
-    : LegendrePolynomial(0, cache)
-    {}
-
-    INLINE_MAFOX_LP()::LegendrePolynomial(Cache &&cache)
-    : LegendrePolynomial(0, std::move(cache))
-    {}
-
     INLINE_MAFOX_LP()::LegendrePolynomial(IntT power)
-    : _power(power), cache()
-    {}
-
-    INLINE_MAFOX_LP()::LegendrePolynomial(IntT power, const Cache &cache)
-    : _power(power), cache(cache)
-    {}
-
-    INLINE_MAFOX_LP()::LegendrePolynomial(IntT power, Cache &&cache)
-    : _power(power), cache(std::move(cache))
+    : _power(power)
     {}
 
     INLINE_MAFOX_LP(MAFOX_SELF &)::power(IntT p)
@@ -1874,12 +1504,12 @@ namespace mafox
 
     INLINE_MAFOX_LP(auto)::operator()(metaxxa::TypeOrRef<const T> x) const
     {
-        return legendre_polynomial<T, IntT>(x, _power, cache);
+        return legendre_polynomial<T, IntT>(x, _power);
     }
 
     INLINE_MAFOX_LP(auto)::pair(metaxxa::TypeOrRef<const T> x) const
     {
-        return legendre_polynomial_pair<T, IntT>(x, _power, cache);
+        return legendre_polynomial_pair<T, IntT>(x, _power);
     }
 
     INLINE_MAFOX_LP(auto)::derivative(metaxxa::TypeOrRef<const T> x) const
@@ -1887,75 +1517,35 @@ namespace mafox
         if(_power == 0)
             return T(0);
 
-        auto [p_n, p_n1] = legendre_polynomial_pair<T, IntT>(x, _power, cache);
+        auto [p_n, p_n1] = pair(x);
 
-        return derivative
+        return legendre_polynomial_derivative<T, IntT>
         (
             x,
+            _power,
             p_n,
             p_n1
         );
     }
 
-    INLINE_MAFOX_LP(auto)::derivative
-    (
-        metaxxa::TypeOrRef<const T> x,
-        metaxxa::TypeOrRef<const T> lp_n,
-        metaxxa::TypeOrRef<const T> lp_n1
-    ) const
-    {
-        return derivative<T, T>(x, lp_n, lp_n1);
-    }
-
-    template <typename T, typename IntT, typename Cache>
-    template <typename LP_n, typename LP_n1>
-    mafox_inline auto MAFOX_SELF::derivative
-    (
-        metaxxa::TypeOrRef<const T> x,
-        metaxxa::TypeOrRef<const LP_n> lp_n,
-        metaxxa::TypeOrRef<const LP_n1> lp_n1
-    ) const
-    {
-        return legendre_polynomial_derivative<T, IntT, LP_n, LP_n1>(x, _power, lp_n, lp_n1);
-    }
-
-    template <typename T, typename IntT, typename Cache>
+    template <typename T, typename IntT>
     template <typename RootsContainer>
     mafox_inline void MAFOX_SELF::roots(RootsContainer &roots, metaxxa::TypeOrRef<const T> eps)
     {
-        return legendre_polynomial_roots<T, IntT, RootsContainer, Cache>(_power, roots, cache, eps);
+        return legendre_polynomial_roots<T, IntT, RootsContainer>(_power, roots, eps);
     }
 
-    template <typename T, typename IntT, typename Cache>
+    template <typename T, typename IntT>
     template <typename RootsContainer>
     mafox_inline RootsContainer MAFOX_SELF::roots(metaxxa::TypeOrRef<const T> eps)
     {
-        return legendre_polynomial_roots<T, IntT, RootsContainer, Cache>(_power, cache, eps);
-    }
-
-    // template <typename T, typename IntT, typename Cache>
-    // template <typename RootsContainer>
-    // mafox_inline std::future<RootsContainer &> MAFOX_SELF::roots_async
-    // (
-    //     std::launch policy, 
-    //     RootsContainer &roots, 
-    //     metaxxa::TypeOrRef<const T> eps
-    // )
-    // {
-    //     return std::async(policy, [](auto &roots, const auto &eps) { roots<RootsContainer>(roots, eps); }, std::ref(roots), obj_or_ref(eps));
-    // }
-
-    template <typename T, typename IntT, typename Cache>
-    template <typename RootsContainer>
-    mafox_inline std::future<RootsContainer> MAFOX_SELF::roots_async
-    (
-        std::launch policy, 
-        metaxxa::TypeOrRef<const T> eps
-    )
-    {
-        return std::async(policy, [this](const auto &eps) { roots<RootsContainer>(eps); }, obj_or_ref(eps));
+        return legendre_polynomial_roots<T, IntT, RootsContainer>(_power, eps);
     }
 }
+
+#ifdef _MSC_VER
+#   pragma warning(pop)
+#endif // _MSC_VER
 
 #undef INLINE_MAFOX_LP
 #undef MAFOX_LP
