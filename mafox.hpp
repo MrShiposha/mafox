@@ -1519,7 +1519,7 @@ namespace mafox
 
         auto [p_n, p_n1] = pair(x);
 
-        return legendre_polynomial_derivative<T, IntT>
+        return legendre_polynomial_derivative<T, IntT, decltype(p_n), decltype(p_n1)>
         (
             x,
             _power,
