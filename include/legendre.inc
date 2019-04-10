@@ -155,13 +155,13 @@ namespace mafox
 
             guess = (k1 - k2*(39.0 - 28.0/sine))*cos(theta);
             std::tie(p_n, p_n1) = legendre_polynomial_pair<T, IntT>(guess, power);
-            dp_n = legendre_polynomial_derivative<T, IntT>(guess, power, p_n, p_n1);
+            dp_n = legendre_polynomial_derivative<T, IntT, T, T>(guess, power, p_n, p_n1);
 
             root = guess - p_n / dp_n;
             while(std::abs(root - guess) >= eps)
             {
                 std::tie(p_n, p_n1) = legendre_polynomial_pair<T, IntT>(root, power);
-                dp_n = legendre_polynomial_derivative<T, IntT>(root, power, p_n, p_n1);
+                dp_n = legendre_polynomial_derivative<T, IntT, T, T>(root, power, p_n, p_n1);
 
                 guess = root;
                 root = guess - p_n / dp_n;
