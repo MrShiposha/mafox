@@ -180,7 +180,7 @@ namespace metaxxa
     {
         using Type = T;
 
-        static constexpr Type VALUE = LITERAL;
+        static constexpr Type value() { return LITERAL; }
     };
 
 }
@@ -214,7 +214,7 @@ namespace metaxxa
     template <typename LiteralH = LiteralNil, typename... LiteralTail>
     struct LiteralCdrT
     {
-        using Tail = LiteralList<typename LiteralH::Type, LiteralTail::VALUE...>;
+        using Tail = LiteralList<typename LiteralH::Type, LiteralTail::value()...>;
     };
 
     template <typename LiteralT>
@@ -239,7 +239,7 @@ namespace metaxxa
 
         static constexpr HeadType head()
         {
-            return Head::VALUE;
+            return Head::value();
         }
     };
 
@@ -282,24 +282,161 @@ constexpr bool operator==(const metaxxa::LiteralNilT, const metaxxa::LiteralNilT
 #define METAXXA_TYPETUPLE_H
 
 
+#ifndef METAXXA_CONCAT_H
+#define METAXXA_CONCAT_H
+
+
+#ifndef METAXXA_MOVEPARAMETERS_H
+#define METAXXA_MOVEPARAMETERS_H
+
+
+namespace metaxxa
+{
+    namespace detail
+    {
+        template
+        <
+            template <typename...> typename DestTemplate,
+            template <typename...> typename SrcTemplate,
+            typename... Args
+        >
+        constexpr auto move_parameters(SrcTemplate<Args...> &&) -> TypeSaver<DestTemplate<Args...>>;
+    }
+
+    template 
+    <
+        template <typename...> typename DestTemplate,
+        typename SrcTemplate
+    >
+    using MoveParameters = typename decltype
+    (
+        detail::move_parameters<DestTemplate>(std::declval<SrcTemplate>())
+    )::Type;
+}
+
+#endif // METAXXA_MOVEPARAMETERS_H
+
+#ifndef METAXXA_TEMPLATECONTAINER_H
+#define METAXXA_TEMPLATECONTAINER_H
+
 namespace metaxxa
 {
     template <typename... Args>
-    class TypeTuple;
+    struct TemplateContainer 
+    {};
+}
 
+#endif // METAXXA_TEMPLATECONTAINER_H
+
+namespace metaxxa
+{
     namespace detail
     {
-        template <typename... Args>
-        struct TupleConcatenator
+        template
+        <
+            typename RHS,
+            typename... LHSArgs
+        >
+        struct Concatenator
         {
             template <typename... RHSArgs>
-            static constexpr auto result_tuple(TypeTuple<RHSArgs...> &&) 
-                -> TypeTuple<Args..., RHSArgs...>;
+            static constexpr auto evaltype(TemplateContainer<RHSArgs...> &&)
+                -> TemplateContainer<LHSArgs..., RHSArgs...>;
+
+            using RHSTypeList = MoveParameters<TemplateContainer, RHS>;
+            using Type = decltype(evaltype(std::declval<RHSTypeList>()));
+        };
+
+        template
+        <
+            typename LHS,
+            typename RHS,
+            bool IS_RHS_LIST = std::is_base_of_v<ListTag, RHS>
+        >
+        struct ConcatenatorImpl
+        {
+            template <typename... LHSArgs>
+            static constexpr auto evaltype(TemplateContainer<LHSArgs...> &&)
+                -> Concatenator<RHS, LHSArgs...>;
+
+            using LHSTypeList = MoveParameters<TemplateContainer, LHS>;
+            using Type = typename decltype(evaltype(std::declval<LHSTypeList>()))::Type;
+        };
+
+        template <typename LHS, bool IS_LIST = std::is_base_of_v<ListTag, LHS>>
+        struct ResolveEndType
+        {
+            using Type = MoveParameters<TemplateContainer, LHS>;
+        };
+
+        template <typename LHS>
+        struct ResolveEndType<LHS, false>
+        {
+            using Type = LHS;
+        };
+
+        template
+        <
+            typename LHS
+        >
+        struct ConcatenatorImpl<LHS, TypeList<>, true>
+        {
+            using Type = typename ResolveEndType<LHS>::Type;
+        };
+
+        template
+        <
+            typename LHS,
+            typename RHS
+        >
+        struct ConcatenatorImpl<LHS, RHS, true>
+        {
+            using Type = typename ConcatenatorImpl
+            <
+                LHS,
+                typename ConcatenatorImpl
+                <
+                    typename RHS::Head,
+                    typename RHS::Tail
+                >::Type
+            >::Type;
+        };
+
+        template
+        <
+            template <typename...> typename Template,
+            typename... Templates
+        >
+        struct ConcatenatorFacade
+        {
+            using List = TypeList<Templates...>;
+
+            using Type = MoveParameters
+            <
+                Template,
+                typename ConcatenatorImpl
+                <
+                    typename List::Head,
+                    typename List::Tail
+                >::Type
+            >;
         };
     }
 
+    template
+    <
+        template <typename...> typename Template,
+        typename... Templates
+    >
+    using Concat = typename detail::ConcatenatorFacade<Template, Templates...>::Type;
+}
+
+#endif // METAXXA_CONCAT_H
+
+namespace metaxxa
+{
     template <typename... Args>
-    class TypeTuple : public TypeList<Args...>
+    class TypeTuple
     {
     public:
         using List = metaxxa::TypeList<Args...>;
@@ -307,8 +444,8 @@ namespace metaxxa
         template <std::size_t INDEX>
         using Get = typename std::tuple_element_t<INDEX, List>;
 
-        template <typename RHSTuple>
-        using Concat = decltype(detail::TupleConcatenator<Args...>::template result_tuple(std::declval<RHSTuple>()));
+        template <typename... RHS>
+        using Concat = Concat<metaxxa::TypeTuple, TypeTuple, RHS...>;
 
         constexpr TypeTuple() = default;
 
@@ -509,32 +646,6 @@ namespace metaxxa
 
 #endif // METAXXA_TIMES_H
 
-#ifndef METAXXA_MOVEPARAMETERS_H
-#define METAXXA_MOVEPARAMETERS_H
-
-namespace metaxxa
-{
-    namespace detail
-    {
-        template
-        <
-            template <typename...> typename DestTemplate,
-            template <typename...> typename SrcTemplate,
-            typename... Args
-        >
-        constexpr auto move_parameters(SrcTemplate<Args...> &&) -> DestTemplate<Args...>;
-    }
-
-    template 
-    <
-        template <typename...> typename DestTemplate,
-        typename SrcTemplate
-    >
-    using MoveParameters = decltype(detail::move_parameters<DestTemplate>(std::declval<SrcTemplate>()));
-}
-
-#endif // METAXXA_MOVEPARAMETERS_H
-
 #ifndef METAXXA_PARAMETERSCOUNT_H
 #define METAXXA_PARAMETERSCOUNT_H
 
@@ -545,26 +656,26 @@ namespace metaxxa
 
 
 
-#ifndef METAXXA_UPPERVALUE_H
-#define METAXXA_UPPERVALUE_H
+#ifndef METAXXA_VALUEMETHOD_H
+#define METAXXA_VALUEMETHOD_H
 
 namespace metaxxa
 {
     template <typename T>
-    struct UpperValue
+    struct ValueMethod
     {
         using Type = typename T::value_type;
 
-        static constexpr Type VALUE = T::value;
+        static constexpr Type value() { return T::value; }
     };
 }
 
-#endif // METAXXA_UPPERVALUE_H
+#endif // METAXXA_VALUEMETHOD_H
 
 namespace metaxxa
 {
     template <std::size_t INDEX>
-    using SizeConstant = UpperValue<std::integral_constant<std::size_t, INDEX>>;
+    using SizeConstant = ValueMethod<std::integral_constant<std::size_t, INDEX>>;
 }
 
 #endif // METAXXA_SIZECONSTANT_H
@@ -589,7 +700,7 @@ namespace metaxxa
     template <typename T>
     constexpr std::size_t parameters_count() 
     {
-        return ParametersCount<T>::VALUE;
+        return ParametersCount<T>::value();
     }
 }
 
@@ -620,8 +731,8 @@ namespace metaxxa
 #define METAXXA_ALGORITHM_H
 
 
-#ifndef METAXXA_ALGORITHM_INDEXFILTER_H
-#define METAXXA_ALGORITHM_INDEXFILTER_H
+#ifndef METAXXA_ALGORITHM_ONLYINDICES_H
+#define METAXXA_ALGORITHM_ONLYINDICES_H
 
 
 namespace metaxxa
@@ -632,11 +743,10 @@ namespace metaxxa
         typename TupleT, 
         std::size_t... INDICES
     >
-    using IndexFilter = Template<std::tuple_element_t<INDICES, TupleT>...>;
-
+    using OnlyIndices = Template<std::tuple_element_t<INDICES, TupleT>...>;
 }
 
-#endif // METAXXA_ALGORITHM_INDEXFILTER_H
+#endif // METAXXA_ALGORITHM_ONLYINDICES_H
 
 #ifndef METAXXA_ALGORITHM_SEQFILTER_H
 #define METAXXA_ALGORITHM_SEQFILTER_H
@@ -653,7 +763,7 @@ namespace metaxxa
             std::size_t... INDICES
         >
         constexpr auto seq_filter(std::index_sequence<INDICES...> &&)
-            -> IndexFilter<Template, TupleT, INDICES...>;
+            -> OnlyIndices<Template, TupleT, INDICES...>;
     }
 
     template
@@ -668,8 +778,8 @@ namespace metaxxa
 #endif // METAXXA_ALGORITHM_SEQFILTER_H
 
 
-#ifndef METAXXA_ALGORITHM_SKIPRANGE_H
-#define METAXXA_ALGORITHM_SKIPRANGE_H
+#ifndef METAXXA_ALGORITHM_TAKERANGE_H
+#define METAXXA_ALGORITHM_TAKERANGE_H
 
 
 
@@ -682,7 +792,7 @@ namespace metaxxa
         std::size_t FROM_I,
         std::size_t TO_I
     >
-    using SkipRange = SeqFilter
+    using TakeRange = SeqFilter
     <
         Template,
         TupleT,
@@ -690,7 +800,51 @@ namespace metaxxa
     >;
 }
 
-#endif // METAXXA_ALGORITHM_SKIPRANGE_H
+#endif // METAXXA_ALGORITHM_TAKERANGE_H
+
+#ifndef METAXXA_ALGORITHM_TAKEFIRST_H
+#define METAXXA_ALGORITHM_TAKEFIRST_H
+
+
+namespace metaxxa
+{
+    template
+    <
+        template <typename...> typename Template,
+        typename TupleT,
+        std::size_t N
+    >
+    using TakeFirst = TakeRange
+    <
+        Template,
+        TupleT,
+        0, N
+    >;
+}
+
+#endif // METAXXA_ALGORITHM_TAKEFIRST_H
+
+#ifndef METAXXA_ALGORITHM_TAKELAST_H
+#define METAXXA_ALGORITHM_TAKELAST_H
+
+
+namespace metaxxa
+{
+    template
+    <
+        template <typename...> typename Template,
+        typename TupleT,
+        std::size_t N
+    >
+    using TakeLast = TakeRange
+    <
+        Template,
+        TupleT,
+        std::tuple_size_v<TupleT> - N, std::tuple_size_v<TupleT>
+    >;
+}
+
+#endif // METAXXA_ALGORITHM_TAKELAST_H
 
 #ifndef METAXXA_ALGORITHM_SKIPFIRST_H
 #define METAXXA_ALGORITHM_SKIPFIRST_H
@@ -704,7 +858,7 @@ namespace metaxxa
         typename TupleT, 
         std::size_t N
     >
-    using SkipFirst = SkipRange
+    using SkipFirst = TakeRange
     <
         Template,
         TupleT,
@@ -726,7 +880,7 @@ namespace metaxxa
         typename TupleT,
         std::size_t N
     >
-    using SkipLast = SkipRange
+    using SkipLast = TakeRange
     <
         Template,
         TupleT,
@@ -740,73 +894,90 @@ namespace metaxxa
 #define METAXXA_ALGORITHM_FIND_H
 
 
+#define EXPAND(...) __VA_ARGS__
+
+#define DEFINE_FIND_ALGORITHM(Variant, ...) \
+    template                                                    \
+    <                                                           \
+        typename TupleT,                                        \
+        EXPAND(FUNCTOR_TYPE),                                   \
+        std::size_t N   = 0,                                    \
+        bool PREV_FOUND = false,                                \
+        bool ENOUGH     = (N >= std::tuple_size_v<TupleT>)      \
+    >                                                           \
+    struct Variant##Find : Variant##Find                        \
+    <                                                           \
+        TupleT,                                                 \
+        Functor,                                                \
+        N + 1,                                                  \
+        Functor<__VA_ARGS__>::value(),                          \
+        N + 1 >= std::tuple_size_v<TupleT>                      \
+    >                                                           \
+    {};                                                         \
+                                                                \
+    template                                                    \
+    <                                                           \
+        typename TupleT,                                        \
+        EXPAND(FUNCTOR_TYPE),                                   \
+        std::size_t N,                                          \
+        bool ENOUGH                                             \
+    >                                                           \
+    struct Variant##Find                                        \
+    <                                                           \
+        TupleT,                                                 \
+        Functor,                                                \
+        N,                                                      \
+        true,                                                   \
+        ENOUGH                                                  \
+    >                                                           \
+    {                                                           \
+        static constexpr bool FOUND = true;                     \
+        static constexpr std::size_t INDEX = N - 1;             \
+                                                                \
+        using Type = std::tuple_element_t<INDEX, TupleT>;       \
+                                                                \
+        template <typename T>                                   \
+        using TypeOr = Type;                                    \
+    };                                                          \
+                                                                \
+    template                                                    \
+    <                                                           \
+        typename TupleT,                                        \
+        EXPAND(FUNCTOR_TYPE),                                   \
+        std::size_t N                                           \
+    >                                                           \
+    struct Variant##Find                                        \
+    <                                                           \
+        TupleT,                                                 \
+        Functor,                                                \
+        N,                                                      \
+        false,                                                  \
+        true                                                    \
+    >                                                           \
+    {                                                           \
+        static constexpr bool FOUND = false;                    \
+                                                                \
+        template <typename T>                                   \
+        using TypeOr = T;                                       \
+    }                                                          
+
 namespace metaxxa
 {
     namespace detail
     {
-        template
-        <
-            typename TupleT,
-            template <typename T> typename Functor,
-            std::size_t N   = 0,
-            bool PREV_FOUND = false,
-            bool ENOUGH     = (N >= std::tuple_size_v<TupleT>)
-        >
-        struct Find : Find
-        <
-            TupleT, 
-            Functor,
-            N + 1,
-            Functor<std::tuple_element_t<N, TupleT>>::VALUE,
-            N + 1 >= std::tuple_size_v<TupleT>
-        >
-        {};
+        #define FUNCTOR_TYPE template <typename T> typename Functor
 
-        template
-        <
-            typename TupleT,
-            template <typename T> typename Functor,
-            std::size_t N,
-            bool ENOUGH
-        >
-        struct Find
-        <
-            TupleT,
-            Functor,
-            N,
-            true,
-            ENOUGH
-        >
-        {
-            static constexpr bool FOUND = true;
-            static constexpr std::size_t INDEX = N - 1;
+        DEFINE_FIND_ALGORITHM(, std::tuple_element_t<N, TupleT>);
 
-            using Type = std::tuple_element_t<INDEX, TupleT>;
+        #undef FUNCTOR_TYPE
+        #define FUNCTOR_TYPE template <typename T, std::size_t INDEX> typename Functor
 
-            template <typename T>
-            using TypeOr = Type;
-        };
-        
-        template
-        <
-            typename TupleT,
-            template <typename T> typename Functor,
-            std::size_t N
-        >
-        struct Find
-        <
-            TupleT,
-            Functor,
-            N,
-            false,
-            true
-        >
-        {
-            static constexpr bool FOUND = false;
+        DEFINE_FIND_ALGORITHM(Index, std::tuple_element_t<N, TupleT>, N);
 
-            template <typename T>
-            using TypeOr = T;
-        };
+        #undef FUNCTOR_TYPE
+        #define FUNCTOR_TYPE template <typename T, std::size_t INDEX, typename SrcTuple> typename Functor
+
+        DEFINE_FIND_ALGORITHM(Overall, std::tuple_element_t<N, TupleT>, N, TupleT);
     }
 
     template 
@@ -815,11 +986,403 @@ namespace metaxxa
         template <typename T> typename Functor
     >
     using Find = detail::Find<TupleT, Functor>;
+
+    template 
+    <
+        typename TupleT,
+        template <typename T, std::size_t INDEX> typename Functor
+    >
+    using IndexFind = detail::IndexFind<TupleT, Functor>;
+
+    template 
+    <
+        typename TupleT,
+        template <typename T, std::size_t INDEX, typename SrcTuple> typename Functor
+    >
+    using OverallFind = detail::OverallFind<TupleT, Functor>;
 }
+
+#undef FUNCTOR_TYPE
+#undef DEFINE_FIND_ALGORITHM
+#undef EXPAND
 
 #endif // METAXXA_ALGORITHM_FIND_H
 
+#ifndef METAXXA_ALGORITHM_SKIPRANGE_H
+#define METAXXA_ALGORITHM_SKIPRANGE_H
+
+
+namespace metaxxa
+{
+    template
+    <
+        template <typename...> typename Template,
+        typename TupleT,
+        std::size_t FROM_I,
+        std::size_t TO_I
+    >
+    using SkipRange = Concat
+    <
+        Template,
+        TakeFirst<TypeList, TupleT, FROM_I>,
+        TakeLast<TypeList, TupleT, std::tuple_size_v<TupleT> - TO_I>
+    >;
+}
+
+#endif // METAXXA_ALGORITHM_SKIPRANGE_H
+
+#ifndef METAXXA_ALGORITHM_FILTER_H
+#define METAXXA_ALGORITHM_FILTER_H
+
+
+
+namespace metaxxa
+{
+    namespace detail
+    {
+        template 
+        <
+            typename TupleT,
+            std::size_t INDEX,
+            bool FunctorResult
+        >
+        struct ResolveFilterType
+        {
+            using Type = TemplateContainer<std::tuple_element_t<INDEX, TupleT>>;
+        };
+
+        template 
+        <
+            typename TupleT,
+            std::size_t INDEX
+        >
+        struct ResolveFilterType<TupleT, INDEX, false>
+        {
+            using Type = TemplateContainer<>;
+        };
+
+        template 
+        <
+            template <typename...> typename Template,
+            typename TupleT,
+            template <typename T> typename Functor,
+            std::size_t... INDICES
+        >
+        constexpr auto filter_types(std::index_sequence<INDICES...>)
+            -> Concat
+                <
+                    Template, 
+                    typename ResolveFilterType
+                    <
+                        TupleT, 
+                        INDICES, 
+                        Functor<std::tuple_element_t<INDICES, TupleT>>::value()
+                    >::Type...
+                >;
+
+        template 
+        <
+            template <typename...> typename Template,
+            typename TupleT,
+            template <typename T, std::size_t INDEX> typename Functor,
+            std::size_t... INDICES
+        >
+        constexpr auto index_filter_types(std::index_sequence<INDICES...>)
+            -> Concat
+                <
+                    Template, 
+                    typename ResolveFilterType
+                    <
+                        TupleT, 
+                        INDICES, 
+                        Functor<std::tuple_element_t<INDICES, TupleT>, INDICES>::value()
+                    >::Type...
+                >;
+
+        template 
+        <
+            template <typename...> typename Template,
+            typename TupleT,
+            template <typename T, std::size_t INDEX, typename SrcTuple> typename Functor,
+            std::size_t... INDICES
+        >
+        constexpr auto overall_filter_types(std::index_sequence<INDICES...>)
+            -> Concat
+                <
+                    Template, 
+                    typename ResolveFilterType
+                    <
+                        TupleT, 
+                        INDICES, 
+                        Functor<std::tuple_element_t<INDICES, TupleT>, INDICES, TupleT>::value()
+                    >::Type...
+                >;
+    }
+
+    template 
+    <
+        template <typename...> typename Template,
+        typename TupleT,
+        template <typename T> typename Functor
+    >
+    using Filter = decltype
+    (
+        detail::filter_types
+        <
+            Template, 
+            TupleT, 
+            Functor
+        >(std::make_index_sequence<std::tuple_size_v<TupleT>>())
+    );
+
+    template 
+    <
+        template <typename...> typename Template,
+        typename TupleT,
+        template <typename T, std::size_t INDEX> typename Functor
+    >
+    using IndexFilter = decltype
+    (
+        detail::index_filter_types
+        <
+            Template, 
+            TupleT, 
+            Functor
+        >(std::make_index_sequence<std::tuple_size_v<TupleT>>())
+    );
+
+    template 
+    <
+        template <typename...> typename Template,
+        typename TupleT,
+        template <typename T, std::size_t INDEX, typename SrcTuple> typename Functor
+    >
+    using OverallFilter = decltype
+    (
+        detail::overall_filter_types
+        <
+            Template, 
+            TupleT, 
+            Functor
+        >(std::make_index_sequence<std::tuple_size_v<TupleT>>())
+    );
+}
+
+#endif // METAXXA_ALGORITHM_FILTER_H
+
 #endif // METAXXA_ALGORITHM_H
+
+
+#ifndef METAXXA_SWITCH_H
+#define METAXXA_SWITCH_H
+
+
+namespace metaxxa
+{
+    namespace detail
+    {
+        template <typename T>
+        struct IsTrue
+        {
+            static constexpr bool value() { return T::value(); }
+        };
+
+        template <bool RESULT, typename CaseType>
+        struct CasePair
+        {
+            static constexpr bool value() { return RESULT; }
+
+            using Type = CaseType;            
+        };
+
+        template 
+        <
+            typename SwitchListT, 
+            typename FindFirstTrue = Find<SwitchListT, IsTrue>, 
+            bool IS_FOUND = FindFirstTrue::FOUND
+        >
+        class CaseImplBase
+        {
+        protected:
+            using SwitchList = SwitchListT;
+
+        public:
+            using Type = typename std::tuple_element_t
+            <
+                FindFirstTrue::INDEX, 
+                SwitchList
+            >::Type;
+
+            template <typename DefaultT>
+            using DefaultType = Type;
+        };
+
+        template 
+        <
+            typename SwitchListT, 
+            typename FindFirstTrue
+        >
+        class CaseImplBase<SwitchListT, FindFirstTrue, false>
+        {
+        protected:
+            using SwitchList = SwitchListT;
+
+        public:
+            template <typename DefaultT>
+            using DefaultType = DefaultT;
+        };
+
+        template 
+        <
+            typename T, 
+            T SRC_CONSTANT, 
+            typename OldSwitchList, 
+            T CASE_CONSTANT, 
+            typename CaseType
+        >
+        class CaseImpl : public CaseImplBase
+        <
+            Concat
+            <
+                TypeList, 
+                OldSwitchList, 
+                TypeList<CasePair<SRC_CONSTANT == CASE_CONSTANT, CaseType>>
+            >
+        >
+        {
+            using Base = CaseImplBase
+            <
+                Concat
+                <
+                    TypeList, 
+                    OldSwitchList, 
+                    TypeList<CasePair<SRC_CONSTANT == CASE_CONSTANT, CaseType>>
+                >
+            >;
+
+        public:
+            template <T NEXT_CONSTANT, typename NextCaseType>
+            using Case = CaseImpl
+            <
+                T, 
+                SRC_CONSTANT, 
+                typename Base::SwitchList,
+                NEXT_CONSTANT, 
+                NextCaseType
+            >;
+        };
+    }
+
+    template <typename T, T CONSTANT>
+    struct Switch
+    {
+        template <T CASE_CONSTANT, typename CaseType>
+        using Case = detail::CaseImpl
+        <
+            T,
+            CONSTANT,
+            TypeList<>,
+            CASE_CONSTANT,
+            CaseType
+        >;
+    };
+}
+
+#endif // METAXXA_SWITCH_H
+
+#ifndef METAXXA_TYPESWITCH_H
+#define METAXXA_TYPESWITCH_H
+
+
+namespace metaxxa
+{
+    namespace detail
+    {
+        template 
+        <
+            typename T,
+            typename OldSwitchList, 
+            typename CaseCondition, 
+            typename CaseType
+        >
+        class TypeCaseImpl : public CaseImplBase
+        <
+            Concat
+            <
+                TypeList, 
+                OldSwitchList, 
+                TypeList<CasePair<std::is_same_v<T, CaseCondition>, CaseType>>
+            >
+        >
+        {
+            using Base = CaseImplBase
+            <
+                Concat
+                <
+                    TypeList, 
+                    OldSwitchList, 
+                    TypeList<CasePair<std::is_same_v<T, CaseCondition>, CaseType>>
+                >
+            >;
+
+        public:
+            template <typename NextTypeCondition, typename NextCaseType>
+            using Case = TypeCaseImpl
+            <
+                T, 
+                typename Base::SwitchList,
+                NextTypeCondition, 
+                NextCaseType
+            >;
+        };
+    }
+
+    template <typename T>
+    struct TypeSwitch
+    {
+        template <typename CaseCondition, typename CaseType>
+        using Case = detail::TypeCaseImpl<T, TypeList<>, CaseCondition, CaseType>;
+    };
+}
+
+#endif // METAXXA_TYPESWITCH_H
+
+
+#ifndef METAXXA_MAKEFUNCTIONTYPE_H
+#define METAXXA_MAKEFUNCTIONTYPE_H
+
+
+
+namespace metaxxa
+{
+    namespace detail
+    {
+        template <typename ResultType>
+        struct MakeFunctionType
+        {
+            template <typename... Args>
+            using Type = ResultType(Args...);
+        };
+
+        template <typename Tuple, std::size_t RETURN_INDEX>
+        struct MakeFunctionTypeImpl
+        {
+            using ResultType = std::tuple_element_t<RETURN_INDEX, Tuple>;
+            using ArgsList  = SkipRange<TypeList, Tuple, RETURN_INDEX, RETURN_INDEX + 1>;
+
+            using Type = MoveParameters
+            <
+                MakeFunctionType<ResultType>::template Type,
+                ArgsList
+            >;
+        };
+    }
+
+    template <typename Tuple, std::size_t RETURN_INDEX>
+    using MakeFunctionType = typename detail::MakeFunctionTypeImpl<Tuple, RETURN_INDEX>::Type;
+}
+
+#endif // METAXXA_MAKEFUNCTIONTYPE_H
 
 
 #ifndef METAXXA_ENABLEFNIF_H
