@@ -10,8 +10,9 @@
 #include <memory>
 #include <vector>
 #include <future>
-#include <tuple>
 #include <initializer_list>
+#include <tuple> // Temporary
+#include <tuple>
 
 #ifndef MAFOX_H
 #define MAFOX_H
@@ -1718,6 +1719,7 @@ namespace mafox
 #   pragma warning(pop)
 #endif // _MSC_VER
 
+#undef INLINE_MAFOX_GMATRIX
 #undef MAFOX_GMATRIX
 #undef MAFOX_SELF
 
@@ -2117,6 +2119,588 @@ namespace mafox
 #undef ENABLE_IF_INT_POWER
 
 #endif // MAFOX_LEGENDRE_INC
+
+#ifndef MAFOX_TABLE_INC
+#define MAFOX_TABLE_INC
+
+
+#ifndef MAFOX_TABLE_H
+#define MAFOX_TABLE_H
+
+
+namespace mafox
+{
+    namespace detail
+    {
+        template <typename... Types>
+        using TupleType = std::tuple<Types...>;
+    }
+
+    template <typename T>
+    class TableColumn
+    {
+    public:
+        mafox_inline TableColumn();
+
+        mafox_inline TableColumn(const TableColumn &);
+        
+        mafox_inline TableColumn(TableColumn &&);
+
+        mafox_inline TableColumn(std::size_t);
+
+        mafox_inline TableColumn(std::size_t, const T &initial_value);
+
+        mafox_inline TableColumn(T *, std::size_t, std::size_t);
+
+        mafox_inline ~TableColumn();
+
+        mafox_inline TableColumn &operator=(const TableColumn &);
+
+        mafox_inline TableColumn &operator=(TableColumn &&);
+
+        mafox_inline std::size_t size() const;
+
+        mafox_inline T *data();
+
+        mafox_inline const T *data() const;
+
+        mafox_inline void reallocate();
+
+        mafox_inline void resize(std::size_t);
+
+        mafox_inline void shrink_to_fit();
+
+        mafox_inline void add_element(const T &);
+
+    private:
+        T *data_;
+        std::size_t size_;
+        std::size_t memory_size;
+    };
+
+    template <typename... Types>
+    class Table
+    {
+    public:
+        Table();
+
+        template <template <typename...> typename TupleT>
+        Table(std::initializer_list<TupleT<Types...>>);
+
+        Table(std::size_t rows, Types&&... initial_values);
+
+        Table(const Table &);
+
+        Table(Table &&);
+
+        Table(std::size_t rows);
+
+        Table &operator=(const Table &);
+
+        Table &operator=(Table &&);
+
+        mafox_inline Table &resize_rows(std::size_t rows);
+
+        mafox_inline std::size_t rows() const;
+
+        mafox_inline constexpr std::size_t cols() const;
+
+        template <std::size_t COLUMN>
+        mafox_inline auto &at(std::size_t row);
+
+        template <std::size_t COLUMN>
+        mafox_inline const auto &at(std::size_t row) const;
+
+        template <std::size_t COLUMN>
+        mafox_inline auto &at();
+
+        template <std::size_t COLUMN>
+        mafox_inline const auto &at() const;
+
+        mafox_inline Table &add_row(const Types & ...);
+
+        mafox_inline Table &add_row(Types && ...);
+
+        template <template <typename...> typename TupleT>
+        mafox_inline Table &add_row(const TupleT<Types...> &);
+
+        template <template <typename...> typename TupleT>
+        mafox_inline Table &add_row(TupleT<Types...> &&);
+
+        mafox_inline void shrink_to_fit();
+
+    private:
+        detail::TupleType<TableColumn<Types>...> columns;
+    };
+
+    template <>
+    class Table<>
+    {};
+}
+
+namespace std
+{
+    template <std::size_t INDEX, typename... Types>
+    class tuple_element<INDEX, mafox::Table<Types...>>
+    {
+    public:
+        using type = std::tuple_element_t<INDEX, metaxxa::TypeList<Types...>>;
+    };
+
+    template <std::size_t INDEX, typename... Types>
+    auto &get(mafox::Table<Types...> &);
+
+    template <std::size_t INDEX, typename... Types>
+    const auto &get(const mafox::Table<Types...> &); 
+}
+
+#endif // MAFOX_TABLE_H
+
+#ifdef _MSC_VER
+#   pragma warning(push)
+#   pragma warning(disable: 4003)
+#endif // _MSC_VER
+
+#define MAFOX_SELF Table<Types...>
+
+#define MAFOX_TABLE(ReturnType) \
+    template <typename... Types> \
+    ReturnType MAFOX_EXPAND(MAFOX_SELF)
+
+#define INLINE_MAFOX_TABLE(ReturnType) \
+    template <typename... Types> \
+    MAFOX_EXPAND(mafox_inline) ReturnType MAFOX_EXPAND(MAFOX_SELF)
+
+namespace mafox
+{
+    namespace detail
+    {
+        static constexpr std::size_t DEFAULT_TABLE_SIZE = 4;
+
+        template <typename T>
+        static T *allocate(std::size_t size, std::size_t memory_size)
+        {
+            T *data = static_cast<T*>(malloc(memory_size * sizeof(T)));
+            for(std::size_t i = 0; i < size; ++i)
+                new (&data[i]) T();
+
+            return data;
+        }
+
+        template <typename T>
+        static T *allocate(std::size_t size, std::size_t memory_size, const T &value)
+        {
+            T *data = static_cast<T*>(malloc(memory_size * sizeof(T)));
+            for(std::size_t i = 0; i < size; ++i)
+                new (&data[i]) T(value);
+
+            return data;
+        }
+
+        template <typename T>
+        static T *raw_allocate(std::size_t size)
+        {
+            return static_cast<T*>(malloc(size * sizeof(T)));
+        }
+
+        template <typename T>
+        static void destruct(T *data, std::size_t from, std::size_t to)
+        {
+            if(data == nullptr)
+                return;
+
+            // destructing from 'to' to 'from' for ensure the default destruction order
+            for(std::size_t i = from; i < to; ++i)
+                data[to - i - 1].~T();
+        }
+
+        template <typename T>
+        static void free(T *data, std::size_t size)
+        {
+            if(data == nullptr)
+                return;
+
+            detail::destruct(data, 0, size);
+            ::free(static_cast<void*>(data));
+        }
+
+        template <typename Tuple, std::size_t... INDICES>
+        static auto columns_from_rows(std::size_t rows, std::index_sequence<INDICES...>)
+        {
+            return TupleType
+            <
+                TableColumn
+                <
+                    std::tuple_element_t<INDICES, Tuple>
+                >...
+            >
+            (
+                std::move
+                (
+                    TableColumn
+                    <
+                        std::tuple_element_t<INDICES, Tuple>
+                    >(rows)
+                )...
+            );
+        }
+
+        template <typename Tuple, std::size_t TYPE_INDEX>
+        static auto column_from_list(std::initializer_list<Tuple> list)
+        {
+            using T = std::tuple_element_t<TYPE_INDEX, Tuple>;
+
+            std::size_t size = 0;
+            std::size_t memory_size = size << 2;
+            T *data = detail::raw_allocate<T>(memory_size);
+
+            for(auto &&item : list)
+                new (&data[size++]) T(std::get<TYPE_INDEX>(item));
+
+            return TableColumn<T>(data, size, memory_size);
+        }
+
+        template <typename Tuple, std::size_t... INDICES>
+        static auto columns_tuple_from_list(std::initializer_list<Tuple> list, std::index_sequence<INDICES...>)
+        {
+            return TupleType
+            <
+                TableColumn
+                <
+                    std::tuple_element_t<INDICES, Tuple>
+                >...
+            >
+            (
+                std::move(column_from_list<Tuple, INDICES>(list))...
+            );
+        }
+    }
+
+    template <typename T>
+    mafox_inline TableColumn<T>::TableColumn()
+    : data_(detail::raw_allocate<T>(detail::DEFAULT_TABLE_SIZE)), size_(0), memory_size(detail::DEFAULT_TABLE_SIZE)
+    {}
+
+    template <typename T>
+    mafox_inline TableColumn<T>::TableColumn(const TableColumn &other)
+    : data_(detail::raw_allocate<T>(other.size_ << 2)), size_(0), memory_size(other.size_ << 2)
+    {
+        for(; size_ < other.size_; ++size_)
+            new (&data_[size_]) T(other.data_[size_]);
+    }
+        
+    template <typename T>
+    mafox_inline TableColumn<T>::TableColumn(TableColumn &&other)
+    : data_(other.data_), size_(other.size_), memory_size(other.memory_size)
+    {
+        other.data_ = nullptr;
+    }
+
+    template <typename T>
+    mafox_inline TableColumn<T>::TableColumn(std::size_t size, const T &initial_value)
+    : data_(detail::allocate<T>(size, size << 2, initial_value)), size_(size), memory_size(size << 2)
+    {}
+
+    template <typename T>
+    mafox_inline TableColumn<T>::TableColumn(std::size_t size)
+    : data_(detail::allocate<T>(size, size << 2)), size_(size), memory_size(size << 2)
+    {}
+
+    template <typename T>
+    mafox_inline TableColumn<T>::TableColumn(T *data, std::size_t size, std::size_t memory_size)
+    : data_(data), size_(size), memory_size(memory_size)
+    {}
+
+    template <typename T>
+    mafox_inline TableColumn<T> &TableColumn<T>::operator=(const TableColumn &rhs)
+    {
+        if(this != &rhs)
+        {
+            TableColumn copy(rhs);
+            *this = std::move(copy);
+        }
+
+        return *this;
+    }
+
+    template <typename T>
+    mafox_inline TableColumn<T> &TableColumn<T>::operator=(TableColumn &&rhs)
+    {
+        data_ = rhs.data_;
+        size_ = rhs.size_;
+        memory_size = rhs.memory_size;
+
+        rhs.data_ = nullptr;
+        return *this;
+    }
+
+    template <typename T>
+    mafox_inline std::size_t TableColumn<T>::size() const
+    {
+        return size_;
+    }
+
+    template <typename T>
+    mafox_inline T *TableColumn<T>::data()
+    {
+        return data_;
+    }
+
+    template <typename T>
+    mafox_inline const T *TableColumn<T>::data() const
+    {
+        return const_cast<TableColumn<T>*>(this)->data();
+    }
+
+    template <typename T>
+    mafox_inline void TableColumn<T>::reallocate()
+    {
+        T *new_data = detail::raw_allocate<T>(memory_size);
+        memcpy(static_cast<void*>(new_data), static_cast<void*>(data_), size_ * sizeof(T));
+        detail::free(data_, size_);
+
+        data_ = new_data;
+    }
+
+    template <typename T>
+    mafox_inline void TableColumn<T>::resize(std::size_t new_size)
+    {
+        if(new_size > size_ && new_size > memory_size)
+        {
+            memory_size = new_size;
+            reallocate();
+        }
+        else if(new_size <= size_)
+            detail::destruct(data_, new_size, size_);
+
+        size_ = new_size;
+    }
+
+    template <typename T>
+    mafox_inline void TableColumn<T>::shrink_to_fit()
+    {
+        memory_size = size_;
+        reallocate();
+    }
+
+    template <typename T>
+    mafox_inline void TableColumn<T>::add_element(const T &e)
+    {
+        if(size_ == memory_size)
+        {
+            memory_size <<= 2;
+            reallocate();
+        }
+
+        new (&data_[size_++]) T(e);
+    }
+
+    template <typename T>
+    mafox_inline TableColumn<T>::~TableColumn()
+    {
+        detail::free(data_, size_);
+    }
+
+    MAFOX_TABLE()::Table()
+    {}
+
+    template <typename... Types>
+    template <template <typename...> typename TupleT>
+    Table<Types...>::Table(std::initializer_list<TupleT<Types...>> list)
+    : columns
+    (
+        std::move
+        (
+            detail::columns_tuple_from_list
+            (
+                list, 
+                std::make_index_sequence<sizeof...(Types)>()
+            )
+        )
+    )
+    {}
+
+    template <typename... Types>
+    Table<Types...>::Table(std::size_t rows, Types&&... initial_values)
+    : columns(std::move(TableColumn<Types>(rows, std::forward<Types>(initial_values)))...)
+    {}
+
+    MAFOX_TABLE()::Table(const Table &other)
+    : columns(other.columns)
+    {}
+
+    MAFOX_TABLE()::Table(Table &&other)
+    : columns(std::move(other.columns))
+    {}
+
+    MAFOX_TABLE()::Table(std::size_t rows)
+    : columns(detail::columns_from_rows<detail::TupleType<Types...>>(rows, std::make_index_sequence<sizeof...(Types)>()))
+    {}
+
+    INLINE_MAFOX_TABLE(MAFOX_SELF &)::operator=(const Table &rhs)
+    {
+        if(this != &rhs)
+            columns = rhs.columns;
+
+        return *this;
+    }
+
+    INLINE_MAFOX_TABLE(MAFOX_SELF &)::operator=(Table &&rhs)
+    {
+        columns = std::move(rhs.columns);
+        return *this;
+    }
+
+    INLINE_MAFOX_TABLE(MAFOX_SELF &)::resize_rows(std::size_t rows)
+    {
+        std::apply
+        (
+            [&rows](auto &... columns)
+            {
+                columns.resize(rows)...;
+            },
+            columns
+        );
+    }
+
+    INLINE_MAFOX_TABLE(std::size_t)::rows() const
+    {
+        return std::get<0>(columns).size();
+    }
+
+    INLINE_MAFOX_TABLE(constexpr std::size_t)::cols() const
+    {
+        return sizeof...(Types);
+    }
+
+    template <typename... Types>
+    template <std::size_t COLUMN>
+    mafox_inline auto &MAFOX_SELF::at(std::size_t row)
+    {
+        auto &column = std::get<COLUMN>(columns);
+        
+        assert(row < column.size());
+        return column.data()[row];
+    }
+
+    template <typename... Types>
+    template <std::size_t COLUMN>
+    mafox_inline const auto &MAFOX_SELF::at(std::size_t row) const
+    {
+        return const_cast<MAFOX_SELF*>(this)->at<COLUMN>(row);
+    }
+
+    template <typename... Types>
+    template <std::size_t COLUMN>
+    mafox_inline auto &MAFOX_SELF::at()
+    {
+        return std::get<COLUMN>(columns);
+    }
+
+    template <typename... Types>
+    template <std::size_t COLUMN>
+    mafox_inline const auto &MAFOX_SELF::at() const
+    {
+        return const_cast<MAFOX_SELF*>(this)->at<COLUMN>();
+    }
+
+    INLINE_MAFOX_TABLE(MAFOX_SELF &)::add_row(const Types&... args)
+    {
+        std::apply
+        (
+            [&](auto &... columns)
+            {
+                columns.add_element(args)...;
+            },
+            columns
+        );
+
+        return *this;
+    }
+
+    INLINE_MAFOX_TABLE(MAFOX_SELF &)::add_row(Types&&... args)
+    {
+        std::apply
+        (
+            [&](auto &... columns)
+            {
+                columns.add_element(std::move(args))...;
+            },
+            columns
+        );
+
+        return *this;
+    }
+
+    template <typename... Types>
+    template <template <typename...> typename TupleT>
+    mafox_inline MAFOX_SELF &MAFOX_SELF::add_row(const TupleT<Types...> &args)
+    {
+        std::apply
+        (
+            [&](auto &... args)
+            {
+                this.add_row(args...);
+            },
+            args
+        );
+
+        return *this;
+    }
+
+    template <typename... Types>
+    template <template <typename...> typename TupleT>
+    mafox_inline MAFOX_SELF &MAFOX_SELF::add_row(TupleT<Types...> &&args)
+    {
+        std::apply
+        (
+            [&](auto &... args)
+            {
+                this.add_row(std::move(args)...);
+            },
+            args
+        );
+
+        return *this;
+    }
+
+    INLINE_MAFOX_TABLE(void)::shrink_to_fit()
+    {
+        std::apply
+        (
+            [&](auto &... columns)
+            {
+                columns.shrink_to_fit()...;
+            },
+            columns
+        );
+    }
+}
+
+namespace std
+{
+    template <std::size_t INDEX, typename... Types>
+    auto &get(mafox::Table<Types...> &table)
+    {
+        return table.at<INDEX>();
+    }
+
+    template <std::size_t INDEX, typename... Types>
+    const auto &get(const mafox::Table<Types...> &table)
+    {
+        return table.at<INDEX>();
+    }
+}
+
+#ifdef _MSC_VER
+#   pragma warning(pop)
+#endif // _MSC_VER
+
+#undef INLINE_MAFOX_TABLE
+#undef MAFOX_GMATRIX
+#undef MAFOX_SELF
+
+#endif // MAFOX_TABLE_INC
 
 #ifndef MAFOX_GRIDFUNCTION_INC
 #define MAFOX_GRIDFUNCTION_INC

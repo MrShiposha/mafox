@@ -191,6 +191,7 @@ namespace mafox
 #   pragma warning(pop)
 #endif // _MSC_VER
 
+#undef INLINE_MAFOX_GMATRIX
 #undef MAFOX_GMATRIX
 #undef MAFOX_SELF
 
