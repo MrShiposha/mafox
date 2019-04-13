@@ -6,7 +6,7 @@
     default_2_constructs = 0; \
     default_2_destructs = 0;  \
 
-TEST_CASE("Table creation", "[metaxxa::Table]")
+TEST_CASE("Table creation/assignment", "[metaxxa::Table]")
 {
     static int default_1_constructs = 0;
     static int default_1_destructs = 0;
@@ -128,6 +128,38 @@ TEST_CASE("Table creation", "[metaxxa::Table]")
 
         REQUIRE(default_1_destructs - 1 == 4);
         REQUIRE(default_2_destructs - 1 == 4);
+    }
+
+    SECTION("Initializer list")
+    {
+        RESET_DEFAULT
+        {
+            Table<TestDefault_1, TestDefault_2> table =
+            {
+                std::make_tuple(TestDefault_1(0), TestDefault_2('z')),
+                std::make_tuple(TestDefault_1(1), TestDefault_2('y')),
+                std::make_tuple(TestDefault_1(2), TestDefault_2('x')),
+                std::make_tuple(TestDefault_1(3), TestDefault_2('?'))
+            };
+
+            static_assert(table.cols() == 2);
+            REQUIRE(table.rows() == 4);
+            REQUIRE(table.at<0>(0).v == 0);
+            REQUIRE(table.at<0>(1).v == 1);
+            REQUIRE(table.at<0>(2).v == 2);
+            REQUIRE(table.at<0>(3).v == 3);
+
+            REQUIRE(table.at<1>(0).v == 'z');
+            REQUIRE(table.at<1>(1).v == 'y');
+            REQUIRE(table.at<1>(2).v == 'x');
+            REQUIRE(table.at<1>(3).v == '?');
+
+            REQUIRE(default_1_constructs - 8 == 4);
+            REQUIRE(default_2_constructs - 8 == 4);
+        }
+
+        REQUIRE(default_1_destructs - 8 == 4);
+        REQUIRE(default_2_destructs - 8 == 4);
     }
 
     SECTION("Copy")

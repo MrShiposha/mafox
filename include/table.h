@@ -62,8 +62,8 @@ namespace mafox
     public:
         Table();
 
-        template <template <typename...> typename TupleT>
-        Table(std::initializer_list<TupleT<Types...>>);
+        template <typename Tuple>
+        Table(std::initializer_list<Tuple>);
 
         Table(std::size_t rows, Types&&... initial_values);
 

@@ -2184,8 +2184,8 @@ namespace mafox
     public:
         Table();
 
-        template <template <typename...> typename TupleT>
-        Table(std::initializer_list<TupleT<Types...>>);
+        template <typename Tuple>
+        Table(std::initializer_list<Tuple>);
 
         Table(std::size_t rows, Types&&... initial_values);
 
@@ -2351,7 +2351,7 @@ namespace mafox
             using T = std::tuple_element_t<TYPE_INDEX, Tuple>;
 
             std::size_t size = 0;
-            std::size_t memory_size = size << 2;
+            std::size_t memory_size = list.size() << 2;
             T *data = detail::raw_allocate<T>(memory_size);
 
             for(auto &&item : list)
@@ -2505,8 +2505,8 @@ namespace mafox
     {}
 
     template <typename... Types>
-    template <template <typename...> typename TupleT>
-    Table<Types...>::Table(std::initializer_list<TupleT<Types...>> list)
+    template <typename Tuple>
+    Table<Types...>::Table(std::initializer_list<Tuple> list)
     : columns
     (
         std::move
