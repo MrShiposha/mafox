@@ -3,11 +3,24 @@
 olddir=$(pwd)
 cd "$(dirname "$0")"
 
-if [ ! -f "./build/tests/mafox-tests" ]; then
-    ./rebuild.sh
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    tests="./build/tests/Debug/mafox-tests"
+else
+    tests="./build/tests/mafox-tests"
+fi
+
+
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    if [ ! -f $tests ]; then
+        ./rebuild.sh
+    fi
+else
+    if [ ! -f $tests ]; then
+        ./rebuild.sh
+    fi
 fi
 
 ./build.sh
-./build/tests/mafox-tests
+$tests
 
 cd $olddir

@@ -2557,7 +2557,7 @@ namespace mafox
         (
             [&rows](auto &... columns)
             {
-                columns.resize(rows)...;
+                (columns.resize(rows), ...);
             },
             columns
         );
@@ -2610,7 +2610,7 @@ namespace mafox
         (
             [&](auto &... columns)
             {
-                columns.add_element(args)...;
+                (columns.add_element(args), ...);
             },
             columns
         );
@@ -2624,7 +2624,7 @@ namespace mafox
         (
             [&](auto &... columns)
             {
-                columns.add_element(std::move(args))...;
+                (columns.add_element(std::move(args)), ...);
             },
             columns
         );
@@ -2640,7 +2640,7 @@ namespace mafox
         (
             [&](auto &... args)
             {
-                this.add_row(args...);
+                this->add_row(args...);
             },
             args
         );
@@ -2656,7 +2656,7 @@ namespace mafox
         (
             [&](auto &... args)
             {
-                this.add_row(std::move(args)...);
+                this->add_row(std::move(args)...);
             },
             args
         );
@@ -2670,7 +2670,7 @@ namespace mafox
         (
             [&](auto &... columns)
             {
-                columns.shrink_to_fit()...;
+                (columns.shrink_to_fit(), ...);
             },
             columns
         );
@@ -2682,13 +2682,13 @@ namespace std
     template <std::size_t INDEX, typename... Types>
     auto &get(mafox::Table<Types...> &table)
     {
-        return table.at<INDEX>();
+        return table.template at<INDEX>();
     }
 
     template <std::size_t INDEX, typename... Types>
     const auto &get(const mafox::Table<Types...> &table)
     {
-        return table.at<INDEX>();
+        return table.template at<INDEX>();
     }
 }
 
