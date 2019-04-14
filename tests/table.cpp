@@ -162,6 +162,25 @@ TEST_CASE("Table creation/assignment", "[metaxxa::Table]")
         REQUIRE(default_2_destructs - 8 == 4);
     }
 
+    SECTION("Do not allocate")
+    {
+        RESET_DEFAULT
+        {
+            Table<TestDefault_1, TestDefault_2> table(DO_NOT_ALLOCATE);
+
+            static_assert(table.cols() == 2);
+            REQUIRE(table.rows() == 0);
+            REQUIRE(table.at<0>().data() == nullptr);
+            REQUIRE(table.at<1>().data() == nullptr);
+
+            REQUIRE(default_1_constructs == 0);
+            REQUIRE(default_2_constructs == 0);
+        }
+
+        REQUIRE(default_1_destructs == 0);
+        REQUIRE(default_2_destructs == 0);
+    }
+
     SECTION("Copy")
     {
         RESET_DEFAULT

@@ -24,11 +24,11 @@ namespace mafox
         
         mafox_inline TableColumn(TableColumn &&);
 
-        mafox_inline TableColumn(std::size_t);
+        mafox_inline TableColumn(std::size_t size);
 
-        mafox_inline TableColumn(std::size_t, const T &initial_value);
+        mafox_inline TableColumn(std::size_t size, const T &initial_value);
 
-        mafox_inline TableColumn(T *, std::size_t, std::size_t);
+        mafox_inline TableColumn(T *data, std::size_t size, std::size_t memory_size);
 
         mafox_inline ~TableColumn();
 
@@ -46,6 +46,8 @@ namespace mafox
 
         mafox_inline void resize(std::size_t);
 
+        mafox_inline void reserve(std::size_t memory_size);
+
         mafox_inline void shrink_to_fit();
 
         mafox_inline void add_element(const T &);
@@ -56,11 +58,17 @@ namespace mafox
         std::size_t memory_size;
     };
 
+    struct DoNotAllocate {};
+
+    inline constexpr DoNotAllocate DO_NOT_ALLOCATE {};
+
     template <typename... Types>
     class Table
     {
     public:
         Table();
+
+        Table(DoNotAllocate);
 
         template <typename Tuple>
         Table(std::initializer_list<Tuple>);

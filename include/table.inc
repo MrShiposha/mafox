@@ -73,6 +73,27 @@ namespace mafox
         }
 
         template <typename Tuple, std::size_t... INDICES>
+        static auto empty_columns(std::index_sequence<INDICES...>)
+        {
+            return TupleType
+            <
+                TableColumn
+                <
+                    std::tuple_element_t<INDICES, Tuple>
+                >...
+            >
+            (
+                std::move
+                (
+                    TableColumn
+                    <
+                        std::tuple_element_t<INDICES, Tuple>
+                    >(nullptr, 0, 0)
+                )...
+            );
+        }
+
+        template <typename Tuple, std::size_t... INDICES>
         static auto columns_from_rows(std::size_t rows, std::index_sequence<INDICES...>)
         {
             return TupleType
@@ -225,6 +246,16 @@ namespace mafox
     }
 
     template <typename T>
+    mafox_inline void TableColumn<T>::reserve(std::size_t memory_size)
+    {
+        if(memory_size > this->memory_size)
+        {
+            this->memory_size = memory_size;
+            reallocate();
+        }
+    }
+
+    template <typename T>
     mafox_inline void TableColumn<T>::shrink_to_fit()
     {
         memory_size = size_;
@@ -236,7 +267,7 @@ namespace mafox
     {
         if(size_ == memory_size)
         {
-            memory_size <<= 2;
+            memory_size = (memory_size == 0? detail::DEFAULT_TABLE_SIZE : memory_size << 2);
             reallocate();
         }
 
@@ -250,6 +281,10 @@ namespace mafox
     }
 
     MAFOX_TABLE()::Table()
+    {}
+
+    MAFOX_TABLE()::Table(DoNotAllocate)
+    : columns(detail::empty_columns<detail::TupleType<Types...>>(std::make_index_sequence<sizeof...(Types)>()))
     {}
 
     template <typename... Types>
