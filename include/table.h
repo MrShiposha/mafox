@@ -12,6 +12,13 @@ namespace mafox
     {
         template <typename... Types>
         using TupleType = std::tuple<Types...>;
+
+        template <typename>
+        using ReplaceWithSizeT = std::size_t;
+
+        struct DoNotConstruct {};
+
+        inline constexpr DoNotConstruct DO_NOT_CONSTRUCT {};
     }
 
     template <typename T>
@@ -19,6 +26,8 @@ namespace mafox
     {
     public:
         mafox_inline TableColumn();
+
+        mafox_inline TableColumn(std::size_t memory_size, detail::DoNotConstruct);
 
         mafox_inline TableColumn(const TableColumn &);
         
@@ -38,9 +47,15 @@ namespace mafox
 
         mafox_inline std::size_t size() const;
 
+        mafox_inline std::size_t capacity() const;
+
         mafox_inline T *data();
 
         mafox_inline const T *data() const;
+
+        mafox_inline T &operator[](std::size_t);
+
+        mafox_inline const T &operator[](std::size_t) const;
 
         mafox_inline void reallocate();
 
@@ -72,6 +87,8 @@ namespace mafox
 
         template <typename Tuple>
         Table(std::initializer_list<Tuple>);
+
+        Table(detail::ReplaceWithSizeT<Types>... memory_sizes);
 
         Table(std::size_t rows, Types&&... initial_values);
 

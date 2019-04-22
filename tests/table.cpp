@@ -291,3 +291,16 @@ TEST_CASE("Table creation/assignment", "[metaxxa::Table]")
         REQUIRE(default_2_destructs - 1 == 4);
     }
 }
+
+TEST_CASE("Allocate, not construct", "[metaxxa::Table]")
+{
+    Table<int, char, double> table(1, 2, 3);
+    REQUIRE(table.at<0>().size() == 0);
+    REQUIRE(table.at<0>().capacity() == sizeof(int));
+
+    REQUIRE(table.at<1>().size() == 0);
+    REQUIRE(table.at<1>().capacity() == 2*sizeof(char));
+
+    REQUIRE(table.at<2>().size() == 0);
+    REQUIRE(table.at<2>().capacity() == 3*sizeof(double));
+}

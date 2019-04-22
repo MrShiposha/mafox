@@ -2134,6 +2134,13 @@ namespace mafox
     {
         template <typename... Types>
         using TupleType = std::tuple<Types...>;
+
+        template <typename>
+        using ReplaceWithSizeT = std::size_t;
+
+        struct DoNotConstruct {};
+
+        inline constexpr DoNotConstruct DO_NOT_CONSTRUCT {};
     }
 
     template <typename T>
@@ -2141,6 +2148,8 @@ namespace mafox
     {
     public:
         mafox_inline TableColumn();
+
+        mafox_inline TableColumn(std::size_t memory_size, detail::DoNotConstruct);
 
         mafox_inline TableColumn(const TableColumn &);
         
@@ -2160,9 +2169,15 @@ namespace mafox
 
         mafox_inline std::size_t size() const;
 
+        mafox_inline std::size_t capacity() const;
+
         mafox_inline T *data();
 
         mafox_inline const T *data() const;
+
+        mafox_inline T &operator[](std::size_t);
+
+        mafox_inline const T &operator[](std::size_t) const;
 
         mafox_inline void reallocate();
 
@@ -2194,6 +2209,8 @@ namespace mafox
 
         template <typename Tuple>
         Table(std::initializer_list<Tuple>);
+
+        Table(detail::ReplaceWithSizeT<Types>... memory_sizes);
 
         Table(std::size_t rows, Types&&... initial_values);
 
@@ -2411,6 +2428,11 @@ namespace mafox
     {}
 
     template <typename T>
+    mafox_inline TableColumn<T>::TableColumn(std::size_t memory_size, detail::DoNotConstruct)
+    : data_(detail::raw_allocate<T>(memory_size)), size_(0), memory_size(memory_size)
+    {}
+
+    template <typename T>
     mafox_inline TableColumn<T>::TableColumn(const TableColumn &other)
     : data_(detail::raw_allocate<T>(other.size_ << 2)), size_(0), memory_size(other.size_ << 2)
     {
@@ -2470,6 +2492,12 @@ namespace mafox
     }
 
     template <typename T>
+    mafox_inline std::size_t TableColumn<T>::capacity() const
+    {
+        return memory_size*sizeof(T);
+    }
+
+    template <typename T>
     mafox_inline T *TableColumn<T>::data()
     {
         return data_;
@@ -2479,6 +2507,18 @@ namespace mafox
     mafox_inline const T *TableColumn<T>::data() const
     {
         return const_cast<TableColumn<T>*>(this)->data();
+    }
+
+    template <typename T>
+    mafox_inline T &TableColumn<T>::operator[](std::size_t index)
+    {
+        return data()[index];
+    }
+
+    template <typename T>
+    mafox_inline const T &TableColumn<T>::operator[](std::size_t index) const
+    {
+        return const_cast<TableColumn<T>&>(*this)[index];
     }
 
     template <typename T>
@@ -2566,6 +2606,11 @@ namespace mafox
     template <typename... Types>
     Table<Types...>::Table(std::size_t rows, Types&&... initial_values)
     : columns(std::move(TableColumn<Types>(rows, std::forward<Types>(initial_values)))...)
+    {}
+
+    template <typename... Types>
+    Table<Types...>::Table(detail::ReplaceWithSizeT<Types>... sizes)
+    : columns(TableColumn<Types>(sizes, detail::DO_NOT_CONSTRUCT)...)
     {}
 
     MAFOX_TABLE()::Table(const Table &other)
