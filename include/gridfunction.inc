@@ -28,7 +28,7 @@ namespace mafox
         template <typename Value>
         mafox_inline TupleT<Value, Args...> GridNodeArgs<Args...>::operator=(const Value &value) const
         {
-            return ValueCatter<Value, Args...>::cat(std::make_index_sequence<args.size()>(), value, args);
+            return ValueCatter<Value, Args...>::cat(std::make_index_sequence<sizeof...(Args)>(), value, args);
         }
     }
 
