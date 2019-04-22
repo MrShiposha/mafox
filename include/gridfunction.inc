@@ -7,6 +7,18 @@ namespace mafox
 {
     namespace detail
     {
+        template <typename Value, typename... Args>
+        struct ValueCatter
+        {
+            template <std::size_t... INDICES>
+            static TupleT<Value, Args...> cat(std::index_sequence<INDICES...>, const Value &value, const TupleT<Args...> &args)
+            {
+                TupleT<Value, Args...> result(value, std::get<INDICES>(args)...);
+
+                return result;
+            };
+        };
+
         template <typename... Args>
         mafox_inline GridNodeArgs<Args...>::GridNodeArgs(Args&&... args)
         : args(std::forward<Args>(args)...)
@@ -14,9 +26,9 @@ namespace mafox
 
         template <typename... Args>
         template <typename Value>
-        mafox_inline TupleT<Args..., Value> GridNodeArgs<Args...>::operator=(const Value &value) const
+        mafox_inline TupleT<Value, Args...> GridNodeArgs<Args...>::operator=(const Value &value) const
         {
-            return std::tuple_cat(args, TupleT<Value>(value));
+            return ValueCatter<Value, Args...>::cat(std::make_index_sequence<args.size()>(), value, args);
         }
     }
 
@@ -28,31 +40,18 @@ namespace mafox
 
     template <typename Value, typename... Args>
     mafox_inline GridFunction<Value(Args...)>::GridFunction()
+    : table(), nodes_count_(0)
     {}
 
     template <typename Value, typename... Args>
-    mafox_inline GridFunction<Value(Args...)>::GridFunction(std::initializer_list<detail::TupleT<Args..., Value>> list)
-    : nodes(list)
+    mafox_inline GridFunction<Value(Args...)>::GridFunction(std::initializer_list<detail::TupleT<Value, Args...>> list)
+    : table(list), nodes_count_(list.size())
     {}
-
-    template <typename Value, typename... Args>
-    mafox_inline auto &GridFunction<Value(Args...)>::node(std::size_t index)
-    {
-        assert(index < nodes.size());
-
-        return nodes[index];
-    }
-
-    template <typename Value, typename... Args>
-    mafox_inline const auto &GridFunction<Value(Args...)>::node(std::size_t index) const
-    {
-        return const_cast<GridFunction<Value(Args...)>*>(this)->node(index);
-    }
 
     template <typename Value, typename... Args>
     mafox_inline std::size_t GridFunction<Value(Args...)>::nodes_count() const
     {
-        return nodes.size();
+        return nodes_count_;
     }
 
     // TODO: deduction guides for GridFunction

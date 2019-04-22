@@ -1,21 +1,17 @@
 #ifndef MAFOX_GRIDFUNCTION_H
 #define MAFOX_GRIDFUNCTION_H
 
-#include "def.h"
-
-#include <tuple>
-#include <vector>
 #include <initializer_list>
+
+#include "def.h"
+#include "table.h"
 
 namespace mafox
 {
     namespace detail
     {
         template <typename... Args>
-        using TupleT = std::tuple<Args...>;
-
-        template <typename T>
-        using TupleContainerT = std::vector<T>;
+        using TupleT = metaxxa::Tuple<Args...>;
 
         template <typename... Args>
         struct GridNodeArgs
@@ -23,7 +19,7 @@ namespace mafox
             mafox_inline explicit GridNodeArgs(Args&&... args);
 
             template <typename Value>
-            mafox_inline TupleT<Args..., Value> operator=(const Value &) const;
+            mafox_inline TupleT<Value, Args...> operator=(const Value &) const;
 
             TupleT<Args...> args;
         };
@@ -40,20 +36,40 @@ namespace mafox
     class GridFunction<Value(Args...)>
     {
     public:
+        using FunctionType = Value(Args...);
+
+        template <template <typename...> typename Template>
+        using MoveFunctionTypes = Template<Value, Args...>;
+
+        using Result = Value;
+
+        template <template <typename...> typename Template>
+        using MoveFunctionArgTypes = Template<Args...>;
+
+        template <std::size_t INDEX>
+        using Argument = typename MoveFunctionArgTypes<metaxxa::TypeTuple>::template Get<INDEX>;
+
         mafox_inline GridFunction();
 
-        mafox_inline GridFunction(std::initializer_list<detail::TupleT<Args..., Value>>);
-
-        mafox_inline auto &node(std::size_t index);
-
-        mafox_inline const auto &node(std::size_t index) const;
+        mafox_inline GridFunction(std::initializer_list<detail::TupleT<Value, Args...>>);
 
         mafox_inline std::size_t nodes_count() const;
 
-
     private:
-        detail::TupleContainerT<detail::TupleT<Args..., Value>> nodes;
+        Table<Value, Args...> table;
+        std::size_t nodes_count_;
     };
+
+    template <typename Value, typename... Args>
+    GridFunction(std::initializer_list<detail::TupleT<Value, Args...>>) 
+        -> GridFunction
+        <
+            metaxxa::MakeFunctionType
+            <
+                metaxxa::TypeTuple<Value, Args...>, 
+                0
+            >
+        >; 
 }
 
 #endif // MAFOX_GRIDFUNCTION_H
