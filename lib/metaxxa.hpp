@@ -1704,26 +1704,6 @@ namespace metaxxa
         {
             return memory_size<Args...>();
         }
-
-        template <typename... Args>
-        struct Copyist
-        {
-            template <typename... ArgsRHS>
-            metaxxa_inline static void copy
-            (
-                unsigned char *dest,
-                std::size_t *dest_offsets,
-
-                const unsigned char *src,
-                std::size_t *src_offsets,
-                ENABLE_FN_IF(sizeof...(Args) == sizeof...(ArgsRHS))
-            )
-            {
-                constexpr std::size_t N = sizeof...(Args);
-
-                for(std::size_t i = 0; i < N; ++i)
-            }
-        };
     }
 
     template <typename... Args>
