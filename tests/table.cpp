@@ -294,7 +294,7 @@ TEST_CASE("Table creation/assignment", "[metaxxa::Table]")
 
 TEST_CASE("Allocate, not construct", "[metaxxa::Table]")
 {
-    Table<int, char, double> table(1, 2, 3);
+    Table<int, char, double> table(DO_NOT_CONSTRUCT, 1, 2, 3);
     REQUIRE(table.at<0>().size() == 0);
     REQUIRE(table.at<0>().capacity() == sizeof(int));
 

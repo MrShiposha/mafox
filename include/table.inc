@@ -151,7 +151,7 @@ namespace mafox
     {}
 
     template <typename T>
-    mafox_inline TableColumn<T>::TableColumn(std::size_t memory_size, detail::DoNotConstruct)
+    mafox_inline TableColumn<T>::TableColumn(std::size_t memory_size, DoNotConstruct)
     : data_(detail::raw_allocate<T>(memory_size)), size_(0), memory_size(memory_size)
     {}
 
@@ -332,8 +332,8 @@ namespace mafox
     {}
 
     template <typename... Types>
-    Table<Types...>::Table(detail::ReplaceWithSizeT<Types>... sizes)
-    : columns(TableColumn<Types>(sizes, detail::DO_NOT_CONSTRUCT)...)
+    Table<Types...>::Table(DoNotConstruct, detail::ReplaceWithSizeT<Types>... sizes)
+    : columns(TableColumn<Types>(sizes, DO_NOT_CONSTRUCT)...)
     {}
 
     MAFOX_TABLE()::Table(const Table &other)

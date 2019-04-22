@@ -2137,11 +2137,11 @@ namespace mafox
 
         template <typename>
         using ReplaceWithSizeT = std::size_t;
-
-        struct DoNotConstruct {};
-
-        inline constexpr DoNotConstruct DO_NOT_CONSTRUCT {};
     }
+
+    struct DoNotConstruct {};
+
+    inline constexpr DoNotConstruct DO_NOT_CONSTRUCT {};
 
     template <typename T>
     class TableColumn
@@ -2149,7 +2149,7 @@ namespace mafox
     public:
         mafox_inline TableColumn();
 
-        mafox_inline TableColumn(std::size_t memory_size, detail::DoNotConstruct);
+        mafox_inline TableColumn(std::size_t memory_size, DoNotConstruct);
 
         mafox_inline TableColumn(const TableColumn &);
         
@@ -2210,7 +2210,7 @@ namespace mafox
         template <typename Tuple>
         Table(std::initializer_list<Tuple>);
 
-        Table(detail::ReplaceWithSizeT<Types>... memory_sizes);
+        Table(DoNotConstruct, detail::ReplaceWithSizeT<Types>... memory_sizes);
 
         Table(std::size_t rows, Types&&... initial_values);
 
@@ -2428,7 +2428,7 @@ namespace mafox
     {}
 
     template <typename T>
-    mafox_inline TableColumn<T>::TableColumn(std::size_t memory_size, detail::DoNotConstruct)
+    mafox_inline TableColumn<T>::TableColumn(std::size_t memory_size, DoNotConstruct)
     : data_(detail::raw_allocate<T>(memory_size)), size_(0), memory_size(memory_size)
     {}
 
@@ -2609,8 +2609,8 @@ namespace mafox
     {}
 
     template <typename... Types>
-    Table<Types...>::Table(detail::ReplaceWithSizeT<Types>... sizes)
-    : columns(TableColumn<Types>(sizes, detail::DO_NOT_CONSTRUCT)...)
+    Table<Types...>::Table(DoNotConstruct, detail::ReplaceWithSizeT<Types>... sizes)
+    : columns(TableColumn<Types>(sizes, DO_NOT_CONSTRUCT)...)
     {}
 
     MAFOX_TABLE()::Table(const Table &other)

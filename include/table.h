@@ -15,11 +15,11 @@ namespace mafox
 
         template <typename>
         using ReplaceWithSizeT = std::size_t;
-
-        struct DoNotConstruct {};
-
-        inline constexpr DoNotConstruct DO_NOT_CONSTRUCT {};
     }
+
+    struct DoNotConstruct {};
+
+    inline constexpr DoNotConstruct DO_NOT_CONSTRUCT {};
 
     template <typename T>
     class TableColumn
@@ -27,7 +27,7 @@ namespace mafox
     public:
         mafox_inline TableColumn();
 
-        mafox_inline TableColumn(std::size_t memory_size, detail::DoNotConstruct);
+        mafox_inline TableColumn(std::size_t memory_size, DoNotConstruct);
 
         mafox_inline TableColumn(const TableColumn &);
         
@@ -88,7 +88,7 @@ namespace mafox
         template <typename Tuple>
         Table(std::initializer_list<Tuple>);
 
-        Table(detail::ReplaceWithSizeT<Types>... memory_sizes);
+        Table(DoNotConstruct, detail::ReplaceWithSizeT<Types>... memory_sizes);
 
         Table(std::size_t rows, Types&&... initial_values);
 
