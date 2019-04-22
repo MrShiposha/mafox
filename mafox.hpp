@@ -3354,14 +3354,7 @@ namespace mafox
 
     template <typename Value, typename... Args>
     GridFunction(std::initializer_list<detail::TupleT<Value, Args...>>) 
-        -> GridFunction
-        <
-            metaxxa::MakeFunctionType
-            <
-                metaxxa::TypeTuple<Value, Args...>, 
-                0
-            >
-        >; 
+        -> GridFunction<Value(Args...)>;
 }
 
 #endif // MAFOX_GRIDFUNCTION_H
