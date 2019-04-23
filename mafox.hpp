@@ -2637,10 +2637,14 @@ namespace mafox
         template <typename>
         using ReplaceWithSizeT = std::size_t;
 
-        template <typename T>
-        inline constexpr bool is_tuple_operations_valid()
+        template <typename... Args>
+        inline constexpr bool is_valid_tuples()
         {
-            return metaxxa::is_valid<T>([](auto &&t) -> std::tuple_element_t<0 /* because RETURN_INDEX == 0 */, decltype(t)> {});
+            return 
+            (
+                true && ... &&
+                metaxxa::is_valid<Args>([](auto t) -> std::tuple_element_t<0 /* because RETURN_INDEX == 0 */, decltype(t)> {})
+            );
         }
 
         template <typename T, bool IS_VALID>
@@ -2725,11 +2729,11 @@ namespace mafox
         template <typename Tuple>
         Table(std::initializer_list<Tuple>);
 
-        template <typename... Tuples>
-        Table(typename detail::AllowOnlyTuples<Tuples, detail::is_tuple_operations_valid<Tuples>()>::Type&&...);
+        template <typename... Tuples, typename = std::enable_if_t<detail::is_valid_tuples<Tuples...>()>>
+        Table(Tuples&&...);
 
-        template <typename... Tuples>
-        Table(const typename detail::AllowOnlyTuples<Tuples, detail::is_tuple_operations_valid<Tuples>()>::Type &...);
+        template <typename... Tuples, typename = std::enable_if_t<detail::is_valid_tuples<Tuples...>()>>
+        Table(const Tuples&...);
 
         Table(DoNotConstruct, detail::ReplaceWithSizeT<Types>... memory_sizes);
 
@@ -2908,6 +2912,27 @@ namespace mafox
                     <
                         std::tuple_element_t<INDICES, Tuple>
                     >(rows)
+                )...
+            );
+        }
+
+        template <typename Tuple, std::size_t... INDICES>
+        static auto columns_from_rows(std::size_t rows, std::index_sequence<INDICES...>, DoNotConstruct)
+        {
+            return TupleType
+            <
+                TableColumn
+                <
+                    std::tuple_element_t<INDICES, Tuple>
+                >...
+            >
+            (
+                std::move
+                (
+                    TableColumn
+                    <
+                        std::tuple_element_t<INDICES, Tuple>
+                    >(rows, DO_NOT_CONSTRUCT)
                 )...
             );
         }
@@ -3125,16 +3150,20 @@ namespace mafox
     {}
 
     template <typename... Types>
-    template <typename... Tuples>
-    Table<Types...>::Table(typename detail::AllowOnlyTuples<Tuples, detail::is_tuple_operations_valid<Tuples>()>::Type&&... tuples)
-    : columns(std::forward<Tuples>(tuples)...)
-    {}
+    template <typename... Tuples, typename>
+    Table<Types...>::Table(Tuples&&... tuples)
+    : columns(detail::columns_from_rows<detail::TupleType<Types...>>(sizeof...(Tuples), std::make_index_sequence<sizeof...(Types)>(), DO_NOT_CONSTRUCT))
+    {
+        (add_row(std::forward<Tuples>(tuples)), ...);
+    }
 
     template <typename... Types>
-    template <typename... Tuples>
-    Table<Types...>::Table(const typename detail::AllowOnlyTuples<Tuples, detail::is_tuple_operations_valid<Tuples>()>::Type &... tuples)
-    : columns(tuples...)
-    {}
+    template <typename... Tuples, typename>
+    Table<Types...>::Table(const Tuples&... tuples)
+    : columns(detail::columns_from_rows<detail::TupleType<Types...>>(sizeof...(Tuples), std::make_index_sequence<sizeof...(Types)>(), DO_NOT_CONSTRUCT))
+    {
+        (add_row(tuples), ...);
+    }
 
     template <typename... Types>
     Table<Types...>::Table(std::size_t rows, Types&&... initial_values)
@@ -3442,11 +3471,13 @@ namespace mafox
     template <typename Value, typename... Args>
     template <typename... ConstructorArgs>
     mafox_inline GridFunction<Value(Args...)>::GridFunction(ConstructorArgs&&... args)
+    : table(std::forward<ConstructorArgs>(args)...), nodes_count_(sizeof...(ConstructorArgs))
     {}
 
     template <typename Value, typename... Args>
     template <typename... ConstructorArgs>
     mafox_inline GridFunction<Value(Args...)>::GridFunction(const ConstructorArgs&... args)
+    : table(args...), nodes_count_(sizeof...(ConstructorArgs))
     {}
 
     template <typename Value, typename... Args>

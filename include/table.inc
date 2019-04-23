@@ -114,6 +114,27 @@ namespace mafox
             );
         }
 
+        template <typename Tuple, std::size_t... INDICES>
+        static auto columns_from_rows(std::size_t rows, std::index_sequence<INDICES...>, DoNotConstruct)
+        {
+            return TupleType
+            <
+                TableColumn
+                <
+                    std::tuple_element_t<INDICES, Tuple>
+                >...
+            >
+            (
+                std::move
+                (
+                    TableColumn
+                    <
+                        std::tuple_element_t<INDICES, Tuple>
+                    >(rows, DO_NOT_CONSTRUCT)
+                )...
+            );
+        }
+
         template <typename Tuple, std::size_t TYPE_INDEX>
         static auto column_from_list(std::initializer_list<Tuple> list)
         {
@@ -327,16 +348,20 @@ namespace mafox
     {}
 
     template <typename... Types>
-    template <typename... Tuples>
-    Table<Types...>::Table(typename detail::AllowOnlyTuples<Tuples, detail::is_tuple_operations_valid<Tuples>()>::Type&&... tuples)
-    : columns(std::forward<Tuples>(tuples)...)
-    {}
+    template <typename... Tuples, typename>
+    Table<Types...>::Table(Tuples&&... tuples)
+    : columns(detail::columns_from_rows<detail::TupleType<Types...>>(sizeof...(Tuples), std::make_index_sequence<sizeof...(Types)>(), DO_NOT_CONSTRUCT))
+    {
+        (add_row(std::forward<Tuples>(tuples)), ...);
+    }
 
     template <typename... Types>
-    template <typename... Tuples>
-    Table<Types...>::Table(const typename detail::AllowOnlyTuples<Tuples, detail::is_tuple_operations_valid<Tuples>()>::Type &... tuples)
-    : columns(tuples...)
-    {}
+    template <typename... Tuples, typename>
+    Table<Types...>::Table(const Tuples&... tuples)
+    : columns(detail::columns_from_rows<detail::TupleType<Types...>>(sizeof...(Tuples), std::make_index_sequence<sizeof...(Types)>(), DO_NOT_CONSTRUCT))
+    {
+        (add_row(tuples), ...);
+    }
 
     template <typename... Types>
     Table<Types...>::Table(std::size_t rows, Types&&... initial_values)

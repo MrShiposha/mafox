@@ -16,10 +16,14 @@ namespace mafox
         template <typename>
         using ReplaceWithSizeT = std::size_t;
 
-        template <typename T>
-        inline constexpr bool is_tuple_operations_valid()
+        template <typename... Args>
+        inline constexpr bool is_valid_tuples()
         {
-            return metaxxa::is_valid<T>([](auto &&t) -> std::tuple_element_t<0 /* because RETURN_INDEX == 0 */, decltype(t)> {});
+            return 
+            (
+                true && ... &&
+                metaxxa::is_valid<Args>([](auto t) -> std::tuple_element_t<0 /* because RETURN_INDEX == 0 */, decltype(t)> {})
+            );
         }
 
         template <typename T, bool IS_VALID>
@@ -104,11 +108,11 @@ namespace mafox
         template <typename Tuple>
         Table(std::initializer_list<Tuple>);
 
-        template <typename... Tuples>
-        Table(typename detail::AllowOnlyTuples<Tuples, detail::is_tuple_operations_valid<Tuples>()>::Type&&...);
+        template <typename... Tuples, typename = std::enable_if_t<detail::is_valid_tuples<Tuples...>()>>
+        Table(Tuples&&...);
 
-        template <typename... Tuples>
-        Table(const typename detail::AllowOnlyTuples<Tuples, detail::is_tuple_operations_valid<Tuples>()>::Type &...);
+        template <typename... Tuples, typename = std::enable_if_t<detail::is_valid_tuples<Tuples...>()>>
+        Table(const Tuples&...);
 
         Table(DoNotConstruct, detail::ReplaceWithSizeT<Types>... memory_sizes);
 
