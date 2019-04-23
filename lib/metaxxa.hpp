@@ -28,6 +28,29 @@
 #include <functional>
 #include <utility>
 
+#ifndef METAXXA_DEF_H
+#define METAXXA_DEF_H
+
+#ifdef _MSC_VER
+    #define metaxxa_inline __forceinline
+#elif defined(__GNUC__)
+    #define metaxxa_inline inline __attribute__((__always_inline__))
+#elif defined(__CLANG__)
+    #if __has_attribute(__always_inline__)
+        #define metaxxa_inline inline __attribute__((__always_inline__))
+    #else
+        #define metaxxa_inline inline
+    #endif
+#else
+    #define metaxxa_inline inline
+#endif
+
+#if __has_include("metaxxa_specs.h")
+#   include "metaxxa_specs.h"
+#endif // specializations
+
+#endif // METAXXA_DEF_H
+
 #ifndef METAXXA_ISVALID_H
 #define METAXXA_ISVALID_H
 
@@ -1177,6 +1200,39 @@ namespace metaxxa
 
 #endif // METAXXA_ALGORITHM_FILTER_H
 
+#ifndef METAXXA_ALGORITHM_APPLY_INC
+#define METAXXA_ALGORITHM_APPLY_INC
+
+
+namespace metaxxa
+{
+    namespace detail
+    {
+        template <typename Callable, typename Tuple, std::size_t... INDICES>
+        auto apply(Callable &&function, Tuple &&tuple, std::index_sequence<INDICES...>)
+        {
+            return std::invoke
+            (
+                std::forward<Callable>(function), 
+                std::get<INDICES>(std::forward<Tuple>(tuple))...
+            );
+        }
+    }
+
+    template <typename Function, typename Tuple>
+    constexpr auto apply(Function &&function, Tuple &&tuple)
+    {
+        return detail::apply
+        (
+            std::forward<Function>(function), 
+            std::forward<Tuple>(tuple), 
+            std::make_index_sequence<std::tuple_size_v<std::decay_t<Tuple>>>()
+        );
+    }
+}
+
+#endif // METAXXA_ALGORITHM_APPLY_INC
+
 
 #ifndef METAXXA_ALGORITHM_INVOKEFUNCTIONS_INC
 #define METAXXA_ALGORITHM_INVOKEFUNCTIONS_INC
@@ -1186,25 +1242,6 @@ namespace metaxxa
 #define METAXXA_ALGORITHM_INVOKEFUNCTIONS_H
 
 
-
-#ifndef METAXXA_DEF_H
-#define METAXXA_DEF_H
-
-#ifdef _MSC_VER
-    #define metaxxa_inline __forceinline
-#elif defined(__GNUC__)
-    #define metaxxa_inline inline __attribute__((__always_inline__))
-#elif defined(__CLANG__)
-    #if __has_attribute(__always_inline__)
-        #define metaxxa_inline inline __attribute__((__always_inline__))
-    #else
-        #define metaxxa_inline inline
-    #endif
-#else
-    #define metaxxa_inline inline
-#endif
-
-#endif // METAXXA_DEF_H
 
 namespace metaxxa
 {
@@ -1707,16 +1744,6 @@ namespace metaxxa
         {
             return memory_size<Args...>();
         }
-
-        template <typename Callable, typename Tuple, std::size_t... INDICES>
-        auto apply(Callable &&function, Tuple &&tuple, std::index_sequence<INDICES...>)
-        {
-            return std::invoke
-            (
-                std::forward<Callable>(function), 
-                std::forward<std::tuple_element_t<INDICES, Tuple>>(tuple.template get<INDICES>())...
-            );
-        }
     }
 
     template <typename... Args>
@@ -1905,17 +1932,6 @@ namespace std
     auto &get(const metaxxa::Tuple<Args...> &tuple)
     {
         return tuple.template get<INDEX>();
-    }
-
-    template <typename Callable, typename... Args>
-    constexpr auto apply(Callable &&function, metaxxa::Tuple<Args...> &&tuple)
-    {
-        return metaxxa::detail::apply
-        (
-            std::forward<Callable>(function), 
-            std::forward<metaxxa::Tuple<Args...>>(tuple), 
-            std::make_index_sequence<sizeof...(Args)>()
-        );
     }
 }
 

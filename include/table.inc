@@ -401,7 +401,7 @@ namespace mafox
 
     INLINE_MAFOX_TABLE(MAFOX_SELF &)::resize_rows(std::size_t rows)
     {
-        std::apply
+        metaxxa::apply
         (
             [&rows](auto &... columns)
             {
@@ -454,7 +454,7 @@ namespace mafox
 
     INLINE_MAFOX_TABLE(MAFOX_SELF &)::add_row(const Types&... args)
     {
-        std::apply
+        metaxxa::apply
         (
             [&](auto &... columns)
             {
@@ -468,7 +468,7 @@ namespace mafox
 
     INLINE_MAFOX_TABLE(MAFOX_SELF &)::add_row(Types&&... args)
     {
-        std::apply
+        metaxxa::apply
         (
             [&](auto &... columns)
             {
@@ -484,7 +484,7 @@ namespace mafox
     template <template <typename...> typename TupleT>
     mafox_inline MAFOX_SELF &MAFOX_SELF::add_row(const TupleT<Types...> &args)
     {
-        std::apply
+        metaxxa::apply
         (
             [&](auto &... args)
             {
@@ -500,7 +500,7 @@ namespace mafox
     template <template <typename...> typename TupleT>
     mafox_inline MAFOX_SELF &MAFOX_SELF::add_row(TupleT<Types...> &&args)
     {
-        std::apply
+        metaxxa::apply
         (
             [&](auto &... args)
             {
@@ -514,7 +514,7 @@ namespace mafox
 
     INLINE_MAFOX_TABLE(void)::shrink_to_fit()
     {
-        std::apply
+        metaxxa::apply
         (
             [&](auto &... columns)
             {
