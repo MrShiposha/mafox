@@ -21,7 +21,7 @@ namespace mafox
         {
             return 
             (
-                true && ... && !std::is_same_v<Args, size_t>
+                true && ... && !std::is_integral_v<Args>
             );
         }
 
@@ -107,11 +107,11 @@ namespace mafox
         template <typename Tuple>
         Table(std::initializer_list<Tuple>);
 
-        template <typename... Tuples, typename = std::enable_if_t<detail::is_not_size_t<Tuples...>()>>
-        Table(Tuples&&...);
+        template <template <typename...> typename... Tuples>
+        Table(Tuples<Types...>&&...);
 
-        template <typename... Tuples, typename = std::enable_if_t<detail::is_not_size_t<Tuples...>()>>
-        Table(const Tuples&...);
+        template <template <typename...> typename... Tuples>
+        Table(const Tuples<Types...>&...);
 
         Table(DoNotConstruct, detail::ReplaceWithSizeT<Types>... memory_sizes);
 

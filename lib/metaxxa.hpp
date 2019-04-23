@@ -1356,6 +1356,9 @@ namespace std
 
     template <std::size_t INDEX, typename... Args>
     auto &get(const metaxxa::Tuple<Args...> &);
+
+    template <typename Callable, typename... Args>
+    constexpr auto apply(Callable &&, metaxxa::Tuple<Args...> &&);
 }
 
 #endif // METAXXA_TUPLE_H
@@ -1704,6 +1707,16 @@ namespace metaxxa
         {
             return memory_size<Args...>();
         }
+
+        template <typename Callable, typename Tuple, std::size_t... INDICES>
+        auto apply(Callable &&function, Tuple &&tuple, std::index_sequence<INDICES...>)
+        {
+            return std::invoke
+            (
+                std::forward<Callable>(function), 
+                std::forward<std::tuple_element_t<INDICES, Tuple>>(tuple.template get<INDICES>())...
+            );
+        }
     }
 
     template <typename... Args>
@@ -1892,6 +1905,17 @@ namespace std
     auto &get(const metaxxa::Tuple<Args...> &tuple)
     {
         return tuple.template get<INDEX>();
+    }
+
+    template <typename Callable, typename... Args>
+    constexpr auto apply(Callable &&function, metaxxa::Tuple<Args...> &&tuple)
+    {
+        return metaxxa::detail::apply
+        (
+            std::forward<Callable>(function), 
+            std::forward<metaxxa::Tuple<Args...>>(tuple), 
+            std::make_index_sequence<sizeof...(Args)>()
+        );
     }
 }
 

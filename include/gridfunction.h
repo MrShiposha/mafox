@@ -76,13 +76,7 @@ namespace mafox
         <
             metaxxa::MakeFunctionType
             <
-                std::remove_cv_t
-                <
-                    std::remove_reference_t
-                    <
-                        typename metaxxa::TypeTuple<ConstructorArgs...>::template Get<0>
-                    >
-                >,
+                std::decay_t<typename metaxxa::TypeTuple<ConstructorArgs...>::template Get<0>>,
                 0
             >
         >;
@@ -93,13 +87,7 @@ namespace mafox
         <
             metaxxa::MakeFunctionType
             <
-                std::remove_cv_t
-                <
-                    std::remove_reference_t
-                    <
-                        typename metaxxa::TypeTuple<ConstructorArgs...>::template Get<0>
-                    >
-                >,
+                std::decay_t<typename metaxxa::TypeTuple<ConstructorArgs...>::template Get<0>>,
                 0
             >
         >;

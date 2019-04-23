@@ -348,16 +348,16 @@ namespace mafox
     {}
 
     template <typename... Types>
-    template <typename... Tuples, typename>
-    Table<Types...>::Table(Tuples&&... tuples)
+    template <template <typename...> typename... Tuples>
+    Table<Types...>::Table(Tuples<Types...>&&... tuples)
     : columns(detail::columns_from_rows<detail::TupleType<Types...>>(sizeof...(Tuples), std::make_index_sequence<sizeof...(Types)>(), DO_NOT_CONSTRUCT))
     {
-        (add_row(std::forward<Tuples>(tuples)), ...);
+        (add_row(std::forward<Tuples<Types...>>(tuples)), ...);
     }
 
     template <typename... Types>
-    template <typename... Tuples, typename>
-    Table<Types...>::Table(const Tuples&... tuples)
+    template <template <typename...> typename... Tuples>
+    Table<Types...>::Table(const Tuples<Types...>&... tuples)
     : columns(detail::columns_from_rows<detail::TupleType<Types...>>(sizeof...(Tuples), std::make_index_sequence<sizeof...(Types)>(), DO_NOT_CONSTRUCT))
     {
         (add_row(tuples), ...);
