@@ -69,6 +69,40 @@ namespace mafox
     template <typename Value, typename... Args>
     GridFunction(std::initializer_list<detail::TupleT<Value, Args...>>) 
         -> GridFunction<Value(Args...)>;
+
+    template <typename... ConstructorArgs>
+    GridFunction(ConstructorArgs&&...) 
+        -> GridFunction
+        <
+            metaxxa::MakeFunctionType
+            <
+                std::remove_cv_t
+                <
+                    std::remove_reference_t
+                    <
+                        typename metaxxa::TypeTuple<ConstructorArgs...>::template Get<0>
+                    >
+                >,
+                0
+            >
+        >;
+
+    template <typename... ConstructorArgs>
+    GridFunction(const ConstructorArgs&...) 
+        -> GridFunction
+        <
+            metaxxa::MakeFunctionType
+            <
+                std::remove_cv_t
+                <
+                    std::remove_reference_t
+                    <
+                        typename metaxxa::TypeTuple<ConstructorArgs...>::template Get<0>
+                    >
+                >,
+                0
+            >
+        >;
 }
 
 #endif // MAFOX_GRIDFUNCTION_H

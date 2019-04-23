@@ -2638,12 +2638,11 @@ namespace mafox
         using ReplaceWithSizeT = std::size_t;
 
         template <typename... Args>
-        inline constexpr bool is_valid_tuples()
+        inline constexpr bool is_not_size_t()
         {
             return 
             (
-                true && ... &&
-                metaxxa::is_valid<Args>([](auto t) -> std::tuple_element_t<0 /* because RETURN_INDEX == 0 */, decltype(t)> {})
+                true && ... && !std::is_same_v<Args, size_t>
             );
         }
 
@@ -2729,10 +2728,10 @@ namespace mafox
         template <typename Tuple>
         Table(std::initializer_list<Tuple>);
 
-        template <typename... Tuples, typename = std::enable_if_t<detail::is_valid_tuples<Tuples...>()>>
+        template <typename... Tuples, typename = std::enable_if_t<detail::is_not_size_t<Tuples...>()>>
         Table(Tuples&&...);
 
-        template <typename... Tuples, typename = std::enable_if_t<detail::is_valid_tuples<Tuples...>()>>
+        template <typename... Tuples, typename = std::enable_if_t<detail::is_not_size_t<Tuples...>()>>
         Table(const Tuples&...);
 
         Table(DoNotConstruct, detail::ReplaceWithSizeT<Types>... memory_sizes);
@@ -3424,6 +3423,40 @@ namespace mafox
     template <typename Value, typename... Args>
     GridFunction(std::initializer_list<detail::TupleT<Value, Args...>>) 
         -> GridFunction<Value(Args...)>;
+
+    template <typename... ConstructorArgs>
+    GridFunction(ConstructorArgs&&...) 
+        -> GridFunction
+        <
+            metaxxa::MakeFunctionType
+            <
+                std::remove_cv_t
+                <
+                    std::remove_reference_t
+                    <
+                        typename metaxxa::TypeTuple<ConstructorArgs...>::template Get<0>
+                    >
+                >,
+                0
+            >
+        >;
+
+    template <typename... ConstructorArgs>
+    GridFunction(const ConstructorArgs&...) 
+        -> GridFunction
+        <
+            metaxxa::MakeFunctionType
+            <
+                std::remove_cv_t
+                <
+                    std::remove_reference_t
+                    <
+                        typename metaxxa::TypeTuple<ConstructorArgs...>::template Get<0>
+                    >
+                >,
+                0
+            >
+        >;
 }
 
 #endif // MAFOX_GRIDFUNCTION_H
