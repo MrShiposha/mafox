@@ -19,7 +19,7 @@ namespace mafox
         template <typename T>
         inline constexpr bool is_tuple_operations_valid()
         {
-            return metaxxa::is_valid<T>([](auto &&t) -> decltype(std::tuple_element_t<0 /* because RETURN_INDEX == 0 */, decltype(t)>) {});
+            return metaxxa::is_valid<T>([](auto &&t) -> std::tuple_element_t<0 /* because RETURN_INDEX == 0 */, decltype(t)> {});
         }
 
         template <typename T, bool IS_VALID>
