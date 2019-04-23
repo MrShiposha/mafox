@@ -164,6 +164,46 @@ namespace mafox
                 std::move(column_from_list<Tuple, INDICES>(list))...
             );
         }
+
+
+
+        template <typename Columns, typename... Args>
+        struct RowAdder
+        {
+            template <std::size_t... INDICES>
+            static void add_row(std::index_sequence<INDICES...>, Columns &columns, Args&&... args)
+            {
+                (std::get<INDICES>(columns).add_element(std::forward<Args>(args)), ...);
+            }
+
+            template <std::size_t... INDICES>
+            static void add_row(std::index_sequence<INDICES...>, Columns &columns, const Args&... args)
+            {
+                (std::get<INDICES>(columns).add_element(args), ...);
+            }
+        };
+
+        template <typename Columns, typename... Args>
+        void add_row(Columns &columns, Args&&... args)
+        {
+            RowAdder<Columns, Args...>::add_row
+            (
+                std::make_index_sequence<sizeof...(Args)>(),
+                columns,
+                std::forward<Args>(args)...
+            );
+        }
+
+        template <typename Columns, typename... Args>
+        void add_row(Columns &columns, const Args&... args)
+        {
+            RowAdder<Columns, Args...>::add_row
+            (
+                std::make_index_sequence<sizeof...(Args)>(),
+                columns,
+                args...
+            );
+        }
     }
 
     template <typename T>
@@ -454,29 +494,13 @@ namespace mafox
 
     INLINE_MAFOX_TABLE(MAFOX_SELF &)::add_row(const Types&... args)
     {
-        metaxxa::apply
-        (
-            [&](auto &... columns)
-            {
-                (columns.add_element(args), ...);
-            },
-            columns
-        );
-
+        detail::add_row(this->columns, args...);
         return *this;
     }
 
     INLINE_MAFOX_TABLE(MAFOX_SELF &)::add_row(Types&&... args)
     {
-        metaxxa::apply
-        (
-            [&](auto &... columns)
-            {
-                (columns.add_element(std::move(args)), ...);
-            },
-            columns
-        );
-
+        detail::add_row(this->columns, std::forward<Types>(args)...);
         return *this;
     }
 
@@ -502,9 +526,9 @@ namespace mafox
     {
         metaxxa::apply
         (
-            [&](auto &... args)
+            [&](auto&&... args)
             {
-                this->add_row(std::move(args)...);
+                this->add_row(std::forward<decltype(args)>(args)...);
             },
             args
         );
