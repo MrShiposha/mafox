@@ -11,6 +11,7 @@ TEST_CASE("functiom creation", "[metaxxa::GridFunction]")
 
     SECTION("List")
     {
+        /* With GCC calling Tuples... constructor. Possible bug of GCC */
         GridFunction func = 
         {
             f(1.42, 0) = 3.14,

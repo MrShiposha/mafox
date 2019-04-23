@@ -44,6 +44,16 @@ namespace mafox
     {}
 
     template <typename Value, typename... Args>
+    template <typename... ConstructorArgs>
+    mafox_inline GridFunction<Value(Args...)>::GridFunction(ConstructorArgs&&... args)
+    {}
+
+    template <typename Value, typename... Args>
+    template <typename... ConstructorArgs>
+    mafox_inline GridFunction<Value(Args...)>::GridFunction(const ConstructorArgs&... args)
+    {}
+
+    template <typename Value, typename... Args>
     mafox_inline GridFunction<Value(Args...)>::GridFunction(std::initializer_list<detail::TupleT<Value, Args...>> list)
     : table(list), nodes_count_(list.size())
     {}
@@ -53,8 +63,6 @@ namespace mafox
     {
         return nodes_count_;
     }
-
-    // TODO: deduction guides for GridFunction
 }
 
 #endif // MAFOX_GRIDFUNCTION_INC

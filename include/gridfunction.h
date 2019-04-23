@@ -51,6 +51,12 @@ namespace mafox
 
         mafox_inline GridFunction();
 
+        template <typename... ConstructorArgs>
+        mafox_inline GridFunction(ConstructorArgs&&...);
+
+        template <typename... ConstructorArgs>
+        mafox_inline GridFunction(const ConstructorArgs&...);
+
         mafox_inline GridFunction(std::initializer_list<detail::TupleT<Value, Args...>>);
 
         mafox_inline std::size_t nodes_count() const;

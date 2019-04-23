@@ -2632,10 +2632,26 @@ namespace mafox
     namespace detail
     {
         template <typename... Types>
-        using TupleType = std::tuple<Types...>;
+        using TupleType = metaxxa::Tuple<Types...>;
 
         template <typename>
         using ReplaceWithSizeT = std::size_t;
+
+        template <typename T>
+        inline constexpr bool is_tuple_operations_valid()
+        {
+            return metaxxa::is_valid<T>([](auto &&t) -> decltype(std::tuple_element_t<0 /* because RETURN_INDEX == 0 */, decltype(t)>) {});
+        }
+
+        template <typename T, bool IS_VALID>
+        struct AllowOnlyTuples
+        {
+            using Type = T;
+        };
+
+        template <typename T>
+        struct AllowOnlyTuples<T, false>
+        {};
     }
 
     struct DoNotConstruct {};
@@ -2708,6 +2724,12 @@ namespace mafox
 
         template <typename Tuple>
         Table(std::initializer_list<Tuple>);
+
+        template <typename... Tuples>
+        Table(typename detail::AllowOnlyTuples<Tuples, detail::is_tuple_operations_valid<Tuples>()>::Type&&...);
+
+        template <typename... Tuples>
+        Table(const typename detail::AllowOnlyTuples<Tuples, detail::is_tuple_operations_valid<Tuples>()>::Type &...);
 
         Table(DoNotConstruct, detail::ReplaceWithSizeT<Types>... memory_sizes);
 
@@ -3103,6 +3125,18 @@ namespace mafox
     {}
 
     template <typename... Types>
+    template <typename... Tuples>
+    Table<Types...>::Table(typename detail::AllowOnlyTuples<Tuples, detail::is_tuple_operations_valid<Tuples>()>::Type&&... tuples)
+    : columns(std::forward<Tuples>(tuples)...)
+    {}
+
+    template <typename... Types>
+    template <typename... Tuples>
+    Table<Types...>::Table(const typename detail::AllowOnlyTuples<Tuples, detail::is_tuple_operations_valid<Tuples>()>::Type &... tuples)
+    : columns(tuples...)
+    {}
+
+    template <typename... Types>
     Table<Types...>::Table(std::size_t rows, Types&&... initial_values)
     : columns(std::move(TableColumn<Types>(rows, std::forward<Types>(initial_values)))...)
     {}
@@ -3343,6 +3377,12 @@ namespace mafox
 
         mafox_inline GridFunction();
 
+        template <typename... ConstructorArgs>
+        mafox_inline GridFunction(ConstructorArgs&&...);
+
+        template <typename... ConstructorArgs>
+        mafox_inline GridFunction(const ConstructorArgs&...);
+
         mafox_inline GridFunction(std::initializer_list<detail::TupleT<Value, Args...>>);
 
         mafox_inline std::size_t nodes_count() const;
@@ -3400,6 +3440,16 @@ namespace mafox
     {}
 
     template <typename Value, typename... Args>
+    template <typename... ConstructorArgs>
+    mafox_inline GridFunction<Value(Args...)>::GridFunction(ConstructorArgs&&... args)
+    {}
+
+    template <typename Value, typename... Args>
+    template <typename... ConstructorArgs>
+    mafox_inline GridFunction<Value(Args...)>::GridFunction(const ConstructorArgs&... args)
+    {}
+
+    template <typename Value, typename... Args>
     mafox_inline GridFunction<Value(Args...)>::GridFunction(std::initializer_list<detail::TupleT<Value, Args...>> list)
     : table(list), nodes_count_(list.size())
     {}
@@ -3409,8 +3459,6 @@ namespace mafox
     {
         return nodes_count_;
     }
-
-    // TODO: deduction guides for GridFunction
 }
 
 #endif // MAFOX_GRIDFUNCTION_INC

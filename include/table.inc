@@ -327,6 +327,18 @@ namespace mafox
     {}
 
     template <typename... Types>
+    template <typename... Tuples>
+    Table<Types...>::Table(typename detail::AllowOnlyTuples<Tuples, detail::is_tuple_operations_valid<Tuples>()>::Type&&... tuples)
+    : columns(std::forward<Tuples>(tuples)...)
+    {}
+
+    template <typename... Types>
+    template <typename... Tuples>
+    Table<Types...>::Table(const typename detail::AllowOnlyTuples<Tuples, detail::is_tuple_operations_valid<Tuples>()>::Type &... tuples)
+    : columns(tuples...)
+    {}
+
+    template <typename... Types>
     Table<Types...>::Table(std::size_t rows, Types&&... initial_values)
     : columns(std::move(TableColumn<Types>(rows, std::forward<Types>(initial_values)))...)
     {}
