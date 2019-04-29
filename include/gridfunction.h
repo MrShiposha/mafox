@@ -46,20 +46,24 @@ namespace mafox
         template <template <typename...> typename Template>
         using MoveFunctionArgTypes = Template<Args...>;
 
+        using Arguments = metaxxa::Tuple<Args...>;
+
         template <std::size_t INDEX>
         using Argument = typename MoveFunctionArgTypes<metaxxa::TypeTuple>::template Get<INDEX>;
 
         mafox_inline GridFunction();
 
-        template <typename... ConstructorArgs>
-        mafox_inline GridFunction(ConstructorArgs&&...);
+        template <typename... NodesTuples>
+        mafox_inline GridFunction(NodesTuples&&...);
 
-        template <typename... ConstructorArgs>
-        mafox_inline GridFunction(const ConstructorArgs&...);
+        template <typename... NodesTuples>
+        mafox_inline GridFunction(const NodesTuples&...);
 
         mafox_inline GridFunction(std::initializer_list<detail::TupleT<Value, Args...>>);
 
         mafox_inline std::size_t nodes_count() const;
+
+        static constexpr std::size_t arguments_size();
 
     private:
         Table<Value, Args...> table;

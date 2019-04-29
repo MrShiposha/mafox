@@ -44,15 +44,15 @@ namespace mafox
     {}
 
     template <typename Value, typename... Args>
-    template <typename... ConstructorArgs>
-    mafox_inline GridFunction<Value(Args...)>::GridFunction(ConstructorArgs&&... args)
-    : table(std::forward<ConstructorArgs>(args)...), nodes_count_(sizeof...(ConstructorArgs))
+    template <typename... NodesTuples>
+    mafox_inline GridFunction<Value(Args...)>::GridFunction(NodesTuples&&... args)
+    : table(std::forward<NodesTuples>(args)...), nodes_count_(sizeof...(NodesTuples))
     {}
 
     template <typename Value, typename... Args>
-    template <typename... ConstructorArgs>
-    mafox_inline GridFunction<Value(Args...)>::GridFunction(const ConstructorArgs&... args)
-    : table(args...), nodes_count_(sizeof...(ConstructorArgs))
+    template <typename... NodesTuples>
+    mafox_inline GridFunction<Value(Args...)>::GridFunction(const NodesTuples&... args)
+    : table(args...), nodes_count_(sizeof...(NodesTuples))
     {}
 
     template <typename Value, typename... Args>
@@ -64,6 +64,12 @@ namespace mafox
     mafox_inline std::size_t GridFunction<Value(Args...)>::nodes_count() const
     {
         return nodes_count_;
+    }
+
+    template <typename Value, typename... Args>
+    constexpr std::size_t GridFunction<Value(Args...)>::arguments_size()
+    {
+        return sizeof...(Args);
     }
 }
 
