@@ -21,8 +21,6 @@
 
 #define MAFOX_EXPAND(...) __VA_ARGS__
 
-#define MAFOX_NCPTR(PTR) const_cast<MAFOX_EXPAND(MAFOX_SELF)*>(PTR)
-
 #define MAFOX_DEFAULT_EPS 0.001
 
 namespace mafox
