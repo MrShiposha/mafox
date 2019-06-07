@@ -1988,6 +1988,32 @@ namespace mafox
 
 #endif // MAFOX_DETAIL_DEF_H
 
+#ifndef MAFOX_UTIL_INC
+#define MAFOX_UTIL_INC
+
+
+#ifndef MAFOX_UTIL_H
+#define MAFOX_UTIL_H
+
+
+namespace mafox
+{
+    mafox_inline void zero_array(void *s, size_t n);
+}
+
+#endif // MAFOX_UTIL_H
+
+namespace mafox
+{
+    mafox_inline void zero_array(void *s, size_t n)
+    {
+        volatile char *p = static_cast<volatile char *>(s);
+        while (n--) *p++ = 0;
+    }
+}
+
+#endif // MAFOX_UTIL_INC
+
 #ifndef MAFOX_AMATRIX_INC
 #define MAFOX_AMATRIX_INC
 
@@ -2365,7 +2391,8 @@ namespace mafox
     : m_data(matrix_data_t<T>::make(rows, cols, order))
     {
         std::size_t sz = rows * cols * sizeof(T);
-        memset_s(data(), sz, 0, sz);
+
+        zero_array(data(), sz);
     }
 
     // template <typename T>

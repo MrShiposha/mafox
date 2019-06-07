@@ -2,6 +2,7 @@
 #define MAFOX_MATRIX_INC
 
 #include "matrix.h"
+#include "util.h"
 
 namespace mafox
 {
@@ -56,7 +57,8 @@ namespace mafox
     : m_data(matrix_data_t<T>::make(rows, cols, order))
     {
         std::size_t sz = rows * cols * sizeof(T);
-        memset_s(data(), sz, 0, sz);
+
+        zero_array(data(), sz);
     }
 
     // template <typename T>
