@@ -100,7 +100,7 @@ namespace mafox
 
     template <typename T>
     BandMatrix<T>::BandMatrix(const BandMatrix &other)
-    : m_data(band_matrix_data_t<T>::make(m_data))
+    : m_data(band_matrix_data_t<T>::make(*other.m_data))
     {}
 
     template <typename T>
@@ -194,25 +194,50 @@ namespace mafox
     template <typename T>
     void BandMatrix<T>::transpose()
     {
+        if(lower_bandwidth() == upper_bandwidth())
+        {
+            for(std::size_t i = 1, diag_index = lower_bandwidth(); i <= diag_index; ++i)
+                m_data->arrays[diag_index - i].swap(m_data->arrays[diag_index + i]);
+            std::swap(m_data->l, m_data->u);
+        }
+        else
+        {
+            BandMatrix<T> result(m_data->size, m_data->u, m_data->l);
+            
+            for(std::size_t i = 0, sz = m_data->u+m_data->l; i <= sz; ++i)
+                result.m_data->arrays[i] = std::move(m_data->arrays[sz - i]);
 
+            *this = std::move(result);
+        }
     }
 
     template <typename T>
     BandMatrix<T> BandMatrix<T>::transposed()
     {
+        BandMatrix<T> result(*this);
+        result.transpose();
 
+        return result;
     }
 
     template <typename T>
     void BandMatrix<T>::transpose_rsd()
     {
+        long long i = -static_cast<long long>(m_data->l);
+        long long u = static_cast<long long>(m_data->u);
+        std::size_t col = 0;
 
+        for(; i <= u; ++i, ++col)
+            std::reverse(m_data->arrays[col].get(), m_data->arrays[col].get() + m_data->size-std::abs(i));
     }
 
     template <typename T>
     BandMatrix<T> BandMatrix<T>::transposed_rsd()
     {
+        BandMatrix<T> result(*this);
+        result.transpose_rsd();
 
+        return result;
     }
 
     template <typename T>

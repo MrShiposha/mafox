@@ -146,3 +146,185 @@ TEST_CASE("creation/setting/getting", "[mafox::BandMatrix]")
         REQUIRE(m(2, 2) == 300);
     }
 }
+
+TEST_CASE("transpose band matrix", "[mafox::BandMatrix]")
+{
+    SECTION("l = u = 0")
+    {
+        BandMatrix<double> m(3, 0, 0);
+
+        m.set_element(0, 0, 1);
+        m.set_element(1, 1, 20);
+        m.set_element(2, 2, 300);
+
+        m.transpose();
+
+        REQUIRE(m(0, 0) == 1);
+        REQUIRE(m(1, 1) == 20);
+        REQUIRE(m(2, 2) == 300);
+    }
+
+    SECTION("l = 1, u = 0")
+    {
+        BandMatrix<double> m(3, 1, 0);
+
+        m.set_element(0, 0, 1);
+        m.set_element(1, 0, 2);
+        m.set_element(1, 1, 20);
+        m.set_element(2, 1, 30);
+        m.set_element(2, 2, 300);
+
+        m.transpose();
+
+        REQUIRE(m.lower_bandwidth() == 0);
+        REQUIRE(m.upper_bandwidth() == 1);
+
+        REQUIRE(m(0, 0) == 1);
+        REQUIRE(m(1, 1) == 20);
+        REQUIRE(m(2, 2) == 300);
+
+        REQUIRE(m(0, 1) == 2);
+        REQUIRE(m(1, 2) == 30);
+    }
+
+    SECTION("l = 0, u = 1")
+    {
+        BandMatrix<double> m(3, 0, 1);
+
+        m.set_element(0, 0, 1);
+        m.set_element(0, 1, 10);
+        m.set_element(1, 1, 20);
+        m.set_element(1, 2, 200);
+        m.set_element(2, 2, 300);
+
+        m.transpose();
+
+        REQUIRE(m.lower_bandwidth() == 1);
+        REQUIRE(m.upper_bandwidth() == 0);
+
+        REQUIRE(m(0, 0) == 1);
+        REQUIRE(m(1, 1) == 20);
+        REQUIRE(m(2, 2) == 300);
+
+        REQUIRE(m(1, 0) == 10);
+        REQUIRE(m(2, 1) == 200);
+    }
+
+    SECTION("l = u = 1")
+    {
+        BandMatrix<double> m(3, 1, 1);
+
+        m.set_element(0, 0, 1);
+        m.set_element(0, 1, 10);
+        m.set_element(1, 0, 2);
+        m.set_element(1, 1, 20);
+        m.set_element(1, 2, 200);
+        m.set_element(2, 1, 30);
+        m.set_element(2, 2, 300);
+
+        m.transpose();
+
+        REQUIRE(m.lower_bandwidth() == 1);
+        REQUIRE(m.upper_bandwidth() == 1);
+
+        REQUIRE(m(0, 0) == 1);
+        REQUIRE(m(1, 1) == 20);
+        REQUIRE(m(2, 2) == 300);
+
+        REQUIRE(m(0, 1) == 2);
+        REQUIRE(m(1, 0) == 10);
+        REQUIRE(m(1, 2) == 30);
+        REQUIRE(m(2, 1) == 200);
+    }
+}
+
+TEST_CASE("transpose_rsd band matrix", "[mafox::BandMatrix]")
+{
+    SECTION("l = u = 0")
+    {
+        BandMatrix<double> m(3, 0, 0);
+
+        m.set_element(0, 0, 1);
+        m.set_element(1, 1, 20);
+        m.set_element(2, 2, 300);
+
+        m.transpose_rsd();
+
+        REQUIRE(m(0, 0) == 300);
+        REQUIRE(m(1, 1) == 20);
+        REQUIRE(m(2, 2) == 1);
+    }
+
+    SECTION("l = 1, u = 0")
+    {
+        BandMatrix<double> m(3, 1, 0);
+
+        m.set_element(0, 0, 1);
+        m.set_element(1, 0, 2);
+        m.set_element(1, 1, 20);
+        m.set_element(2, 1, 30);
+        m.set_element(2, 2, 300);
+
+        m.transpose_rsd();
+
+        REQUIRE(m.lower_bandwidth() == 1);
+        REQUIRE(m.upper_bandwidth() == 0);
+
+        REQUIRE(m(0, 0) == 300);
+        REQUIRE(m(1, 1) == 20);
+        REQUIRE(m(2, 2) == 1);
+
+        REQUIRE(m(1, 0) == 30);
+        REQUIRE(m(2, 1) == 2);
+    }
+
+    SECTION("l = 0, u = 1")
+    {
+        BandMatrix<double> m(3, 0, 1);
+
+        m.set_element(0, 0, 1);
+        m.set_element(0, 1, 10);
+        m.set_element(1, 1, 20);
+        m.set_element(1, 2, 200);
+        m.set_element(2, 2, 300);
+
+        m.transpose_rsd();
+
+        REQUIRE(m.lower_bandwidth() == 0);
+        REQUIRE(m.upper_bandwidth() == 1);
+
+        REQUIRE(m(0, 0) == 300);
+        REQUIRE(m(1, 1) == 20);
+        REQUIRE(m(2, 2) == 1);
+
+        REQUIRE(m(0, 1) == 200);
+        REQUIRE(m(1, 2) == 10);
+    }
+
+    SECTION("l = u = 1")
+    {
+        BandMatrix<double> m(3, 1, 1);
+
+        m.set_element(0, 0, 1);
+        m.set_element(0, 1, 10);
+        m.set_element(1, 0, 2);
+        m.set_element(1, 1, 20);
+        m.set_element(1, 2, 200);
+        m.set_element(2, 1, 30);
+        m.set_element(2, 2, 300);
+
+        m.transpose_rsd();
+
+        REQUIRE(m.lower_bandwidth() == 1);
+        REQUIRE(m.upper_bandwidth() == 1);
+
+        REQUIRE(m(0, 0) == 300);
+        REQUIRE(m(1, 1) == 20);
+        REQUIRE(m(2, 2) == 1);
+
+        REQUIRE(m(0, 1) == 200);
+        REQUIRE(m(1, 0) == 30);
+        REQUIRE(m(1, 2) == 10);
+        REQUIRE(m(2, 1) == 2);
+    }
+}
