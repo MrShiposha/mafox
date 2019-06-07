@@ -20,16 +20,16 @@
     using const_reference     = typename AMatrix<Matrix>::const_reference;       \
     using Size                = typename AMatrix<Matrix>::Size
 
-#define MAFOX_DEFAULT_TRAITS(user_data_t)                          \
+#define MAFOX_DEFAULT_TRAITS(value_t, user_data_t)                 \
         using data_t              = user_data_t;                   \
         using shared_data_t       = std::shared_ptr<data_t>;       \
         using const_shared_data_t = std::shared_ptr<const data_t>; \
         using difference_type     = std::ptrdiff_t;                \
-        using value_type          = std::remove_cv_t<T>;           \
-        using pointer             = T *;                           \
-        using const_pointer       = const T *;                     \
-        using reference           = T &;                           \
-        using const_reference     = const T &
+        using value_type          = std::remove_cv_t<value_t>;     \
+        using pointer             = value_t *;                     \
+        using const_pointer       = const value_t *;               \
+        using reference           = value_t &;                     \
+        using const_reference     = const value_t &
 
 namespace mafox
 {

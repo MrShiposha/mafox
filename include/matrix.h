@@ -17,7 +17,7 @@ namespace mafox
     template <typename T>
     struct MatrixTraits<Matrix<T>>
     {
-        MAFOX_DEFAULT_TRAITS(matrix_data_t<T>);
+        MAFOX_DEFAULT_TRAITS(T, matrix_data_t<T>);
     };
 
     template <typename T>
