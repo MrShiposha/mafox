@@ -65,7 +65,7 @@ namespace mafox
 
         virtual const_shared_data_t shared_cdata() const override;
 
-        virtual Matrix<T> share();
+        virtual Matrix<T> share() override;
 
         virtual std::shared_ptr<IMatrix<T>> share_interface() override;
 

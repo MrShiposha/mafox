@@ -2097,57 +2097,6 @@ namespace mafox
     };
 }
 
-namespace std
-{
-    template <std::size_t INDEX, typename T>
-    class tuple_element<INDEX, mafox::Size2D<T>>
-    {
-    public:
-        using type = T;
-    };
-
-    template <typename T>
-    class tuple_size<mafox::Size2D<T>>
-    {
-    public:
-        static constexpr std::size_t value = 2;
-    };
-
-    template <std::size_t INDEX, typename T>
-    auto get(const mafox::Size2D<T> &size)
-    {
-        if constexpr(INDEX == 0)
-            return size.width;
-        else if constexpr(INDEX == 1)
-            return size.height;
-    }
-
-    template <std::size_t INDEX, typename T>
-    class tuple_element<INDEX, mafox::Size3D<T>>
-    {
-    public:
-        using type = T;
-    };
-
-    template <typename T>
-    class tuple_size<mafox::Size3D<T>>
-    {
-    public:
-        static constexpr std::size_t value = 3;
-    };
-
-    template <std::size_t INDEX, typename T>
-    auto get(const mafox::Size3D<T> &size)
-    {
-        if constexpr(INDEX == 0)
-            return size.width;
-        else if constexpr(INDEX == 1)
-            return size.height;
-        else if constexpr(INDEX == 1)
-            return size.length;
-    }
-}
-
 #endif // MAFOX_SIZE_H
 
 #define USING_MAFOX_MATRIX_TYPES(Matrix)                                         \
@@ -2364,7 +2313,7 @@ namespace mafox
 
         virtual const_shared_data_t shared_cdata() const override;
 
-        virtual Matrix<T> share();
+        virtual Matrix<T> share() override;
 
         virtual std::shared_ptr<IMatrix<T>> share_interface() override;
 
