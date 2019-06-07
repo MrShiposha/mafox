@@ -2772,7 +2772,7 @@ namespace mafox
                 || j > i + u;
         }
 
-        const T &at(std::size_t i, std::size_t j) const
+        const T &c_at(std::size_t i, std::size_t j) const
         {
             if(is_zero(i, j))
                 return ZERO<T>;
@@ -2787,8 +2787,12 @@ namespace mafox
 
         T &at(std::size_t i, std::size_t j)
         {
-            const T &r = const_cast<const band_matrix_data_t<T>*>(this)->at(i, j);
-            return const_cast<T &>(r);
+            assert(!is_zero(i, j));
+
+            std::size_t col = j - (static_cast<long long>(i) - static_cast<long long>(l));
+            std::size_t row = (j < i? i - (i-j) : i);
+
+            return arrays[col][row];
         }
 
         std::size_t size;
@@ -2871,7 +2875,7 @@ namespace mafox
     {
         assert(i < rows() && j < cols());
 
-        return m_data->at(i, j);
+        return m_data->c_at(i, j);
     }
 
     template <typename T>
@@ -2889,7 +2893,7 @@ namespace mafox
             return false;
         else
         {
-            element(i, j) = value;
+            m_data->at(i, j) = value;
             return true;
         }
     }
