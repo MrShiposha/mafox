@@ -8,26 +8,26 @@ namespace mafox
     template <typename Matrix>
     typename AMatrix<Matrix>::Size AMatrix<Matrix>::size() const
     {
-        return Size { rows(), cols() };
+        return Size { this->rows(), this->cols() };
     }
 
     template <typename Matrix>
     bool AMatrix<Matrix>::is_square() const
     {
-        return rows() == cols();
+        return this->rows() == this->cols();
     }
 
     template <typename Matrix>
     mafox_inline typename AMatrix<Matrix>::const_reference 
     AMatrix<Matrix>::operator()(std::size_t i, std::size_t j) const
     {
-        return element(i, j);
+        return this->element(i, j);
     }
 
     template <typename Matrix>
     bool AMatrix<Matrix>::try_set_element(std::size_t i, std::size_t j, const_reference value)
     {
-        set_element(i, j, value);
+        this->set_element(i, j, value);
         return true;
     }
 }
