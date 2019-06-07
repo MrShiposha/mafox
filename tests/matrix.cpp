@@ -236,3 +236,12 @@ TEST_CASE("element", "[mafox::Matrix]")
 
     REQUIRE(m.data()[1*m.cols() + 0] == m1.data()[0*m1.rows() + 1]);
 }
+
+TEST_CASE("share", "[mafox::Matrix]")
+{
+    Matrix<double> m(2, 3);
+    Matrix<double> m1 = m.share();
+
+    REQUIRE(m.shared_data() == m1.shared_data());
+    REQUIRE(m.data() == m1.data());
+}

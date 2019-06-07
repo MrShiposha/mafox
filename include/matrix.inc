@@ -85,6 +85,11 @@ namespace mafox
     {}
 
     template <typename T>
+    Matrix<T>::Matrix(shared_data_t m_data)
+    : m_data(m_data)
+    {}
+
+    template <typename T>
     Matrix<T>::~Matrix()
     {}
 
@@ -220,6 +225,24 @@ namespace mafox
     typename Matrix<T>::const_shared_data_t Matrix<T>::shared_cdata() const
     {
         return m_data;
+    }
+
+    template <typename T>
+    Matrix<T> Matrix<T>::share()
+    {
+        return Matrix<T>(m_data);
+    }
+
+    template <typename T>
+    std::shared_ptr<IMatrix<T>> Matrix<T>::share_interface()
+    {
+        return std::shared_ptr<Matrix<T>>(new Matrix<T>(m_data));
+    }
+
+    template <typename T>
+    std::shared_ptr<const IMatrix<T>> Matrix<T>::share_interface() const
+    {
+        return std::shared_ptr<Matrix<T>>(new Matrix<T>(m_data));
     }
 
     template <typename T>

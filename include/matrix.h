@@ -65,6 +65,12 @@ namespace mafox
 
         virtual const_shared_data_t shared_cdata() const override;
 
+        virtual Matrix<T> share();
+
+        virtual std::shared_ptr<IMatrix<T>> share_interface() override;
+
+        virtual std::shared_ptr<const IMatrix<T>> share_interface() const override;
+
         pointer data();
 
         const_pointer cdata() const;
@@ -74,6 +80,8 @@ namespace mafox
         void set_order(MatrixOrder);
 
     private:
+        Matrix(shared_data_t);
+
         shared_data_t m_data;
     };
 }

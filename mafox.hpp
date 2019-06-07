@@ -7,8 +7,8 @@
 #include <utility>
 #include <iostream>
 #include <iomanip>
-#include <cstring>
 #include <memory>
+#include <cstring>
 
 #ifndef MAFOX_H
 #define MAFOX_H
@@ -2024,6 +2024,57 @@ namespace mafox
 
 
 
+#ifndef MAFOX_IMATRIX_H
+#define MAFOX_IMATRIX_H
+
+
+namespace mafox
+{
+    template <typename T>
+    class IMatrix
+    {
+    public:
+        using difference_type     = std::ptrdiff_t;
+        using value_type          = std::remove_cv_t<T>;
+        using pointer             = T *;
+        using const_pointer       = const T *;
+        using reference           = T &;
+        using const_reference     = const T &;
+
+        IMatrix() = default;
+
+        IMatrix(const IMatrix &) = default;
+
+        IMatrix(IMatrix &&) = default;
+
+        virtual ~IMatrix() = default;
+
+        IMatrix &operator=(const IMatrix &) = delete;
+
+        IMatrix &operator=(IMatrix &&) = delete;
+
+        virtual std::size_t rows() const = 0;
+
+        virtual std::size_t cols() const = 0;
+
+        virtual reference element(std::size_t i, std::size_t j) = 0;
+
+        virtual const_reference element(std::size_t i, std::size_t j) const = 0;
+
+        virtual void set_element(std::size_t i, std::size_t j, const_reference) = 0;
+
+        virtual void transpose() = 0;
+
+        virtual void transpose_rsd() = 0;
+
+        virtual std::shared_ptr<IMatrix> share_interface() = 0;
+
+        virtual std::shared_ptr<const IMatrix> share_interface() const = 0;
+    };
+}
+
+#endif // MAFOX_IMATRIX_H
+
 #ifndef MAFOX_SIZE_H
 #define MAFOX_SIZE_H
 
@@ -2128,19 +2179,21 @@ namespace mafox
     struct MatrixTraits;
 
     template <typename Matrix>
-    class AMatrix
+    class AMatrix : public IMatrix<typename MatrixTraits<Matrix>::value_type>
     {
     public:
         using Traits              = MatrixTraits<Matrix>;
         using data_t              = typename Traits::data_t;
         using shared_data_t       = typename Traits::shared_data_t;
         using const_shared_data_t = typename Traits::const_shared_data_t;
-        using difference_type     = typename Traits::difference_type;
+
         using value_type          = typename Traits::value_type;
-        using pointer             = typename Traits::pointer;
-        using const_pointer       = typename Traits::const_pointer;
-        using reference           = typename Traits::reference;
-        using const_reference     = typename Traits::const_reference;
+        using Interface           = IMatrix<value_type>;
+        using difference_type     = typename Interface::difference_type;
+        using pointer             = typename Interface::pointer;
+        using const_pointer       = typename Interface::const_pointer;
+        using reference           = typename Interface::reference;
+        using const_reference     = typename Interface::const_reference;
         
         using Size                = Size2D<std::size_t>;
 
@@ -2156,27 +2209,13 @@ namespace mafox
 
         AMatrix &operator=(AMatrix &&) = delete;
 
-        virtual std::size_t rows() const = 0;
-
-        virtual std::size_t cols() const = 0;
-
         Size size() const;
 
         bool is_square() const;
 
-        virtual reference element(std::size_t i, std::size_t j) = 0;
-
-        virtual const_reference element(std::size_t i, std::size_t j) const = 0;
-
         mafox_inline const_reference operator()(std::size_t i, std::size_t j) const;
 
-        virtual void set_element(std::size_t i, std::size_t j, const_reference) = 0;
-
-        virtual void transpose() = 0;
-
         virtual Matrix transposed() = 0;
-
-        virtual void transpose_rsd() = 0;
 
         virtual Matrix transposed_rsd() = 0;
 
@@ -2186,7 +2225,7 @@ namespace mafox
 
         virtual const_shared_data_t shared_cdata() const = 0;
 
-    private:
+        virtual Matrix share() = 0;
     };
 }
 
@@ -2325,6 +2364,12 @@ namespace mafox
 
         virtual const_shared_data_t shared_cdata() const override;
 
+        virtual Matrix<T> share();
+
+        virtual std::shared_ptr<IMatrix<T>> share_interface() override;
+
+        virtual std::shared_ptr<const IMatrix<T>> share_interface() const override;
+
         pointer data();
 
         const_pointer cdata() const;
@@ -2334,6 +2379,8 @@ namespace mafox
         void set_order(MatrixOrder);
 
     private:
+        Matrix(shared_data_t);
+
         shared_data_t m_data;
     };
 }
@@ -2416,6 +2463,11 @@ namespace mafox
     template <typename T>
     Matrix<T>::Matrix(Matrix &&other)
     : m_data(matrix_data_t<T>::make(other.rows(), other.cols(), other.order(), std::move(other.m_data->array)))
+    {}
+
+    template <typename T>
+    Matrix<T>::Matrix(shared_data_t m_data)
+    : m_data(m_data)
     {}
 
     template <typename T>
@@ -2554,6 +2606,24 @@ namespace mafox
     typename Matrix<T>::const_shared_data_t Matrix<T>::shared_cdata() const
     {
         return m_data;
+    }
+
+    template <typename T>
+    Matrix<T> Matrix<T>::share()
+    {
+        return Matrix<T>(m_data);
+    }
+
+    template <typename T>
+    std::shared_ptr<IMatrix<T>> Matrix<T>::share_interface()
+    {
+        return std::shared_ptr<Matrix<T>>(new Matrix<T>(m_data));
+    }
+
+    template <typename T>
+    std::shared_ptr<const IMatrix<T>> Matrix<T>::share_interface() const
+    {
+        return std::shared_ptr<Matrix<T>>(new Matrix<T>(m_data));
     }
 
     template <typename T>

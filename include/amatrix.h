@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <utility>
 
+#include "imatrix.h"
 #include "size.h"
 #include "def.h"
 
@@ -37,19 +38,21 @@ namespace mafox
     struct MatrixTraits;
 
     template <typename Matrix>
-    class AMatrix
+    class AMatrix : public IMatrix<typename MatrixTraits<Matrix>::value_type>
     {
     public:
         using Traits              = MatrixTraits<Matrix>;
         using data_t              = typename Traits::data_t;
         using shared_data_t       = typename Traits::shared_data_t;
         using const_shared_data_t = typename Traits::const_shared_data_t;
-        using difference_type     = typename Traits::difference_type;
+
         using value_type          = typename Traits::value_type;
-        using pointer             = typename Traits::pointer;
-        using const_pointer       = typename Traits::const_pointer;
-        using reference           = typename Traits::reference;
-        using const_reference     = typename Traits::const_reference;
+        using Interface           = IMatrix<value_type>;
+        using difference_type     = typename Interface::difference_type;
+        using pointer             = typename Interface::pointer;
+        using const_pointer       = typename Interface::const_pointer;
+        using reference           = typename Interface::reference;
+        using const_reference     = typename Interface::const_reference;
         
         using Size                = Size2D<std::size_t>;
 
@@ -65,27 +68,13 @@ namespace mafox
 
         AMatrix &operator=(AMatrix &&) = delete;
 
-        virtual std::size_t rows() const = 0;
-
-        virtual std::size_t cols() const = 0;
-
         Size size() const;
 
         bool is_square() const;
 
-        virtual reference element(std::size_t i, std::size_t j) = 0;
-
-        virtual const_reference element(std::size_t i, std::size_t j) const = 0;
-
         mafox_inline const_reference operator()(std::size_t i, std::size_t j) const;
 
-        virtual void set_element(std::size_t i, std::size_t j, const_reference) = 0;
-
-        virtual void transpose() = 0;
-
         virtual Matrix transposed() = 0;
-
-        virtual void transpose_rsd() = 0;
 
         virtual Matrix transposed_rsd() = 0;
 
@@ -95,7 +84,7 @@ namespace mafox
 
         virtual const_shared_data_t shared_cdata() const = 0;
 
-    private:
+        virtual Matrix share() = 0;
     };
 }
 
