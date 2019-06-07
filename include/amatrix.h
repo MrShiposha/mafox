@@ -32,6 +32,17 @@
         using reference           = value_t &;                     \
         using const_reference     = const value_t &
 
+#define MAFOX_INHERIT_TRAITS(base_t)                                      \
+        using data_t              = typename base_t::data_t;              \
+        using shared_data_t       = typename base_t::shared_data_t;       \
+        using const_shared_data_t = typename base_t::const_shared_data_t; \
+        using difference_type     = typename base_t::difference_type;     \
+        using value_type          = typename base_t::value_type;          \
+        using pointer             = typename base_t::pointer;             \
+        using const_pointer       = typename base_t::const_pointer;       \
+        using reference           = typename base_t::reference;           \
+        using const_reference     = typename base_t::const_reference
+
 namespace mafox
 {
     template <typename Matrix>
