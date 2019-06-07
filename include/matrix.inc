@@ -1,6 +1,8 @@
 #ifndef MAFOX_MATRIX_INC
 #define MAFOX_MATRIX_INC
 
+#include <cstring>
+
 #include "matrix.h"
 #include "util.h"
 
