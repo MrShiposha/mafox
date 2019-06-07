@@ -5,5 +5,6 @@
 #include "util.inc"
 #include "amatrix.inc"
 #include "matrix.inc"
+#include "bandmatrix.inc"
 
 #endif // MAFOX_H

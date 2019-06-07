@@ -5,6 +5,9 @@
 
 namespace mafox
 {
+    template <typename T>
+    inline const static T ZERO(0);
+
     mafox_inline void zero_array(void *s, size_t n);
 }
 
