@@ -113,6 +113,7 @@ namespace mafox
         {
             m_data->rows  = rhs.m_data->rows;
             m_data->cols  = rhs.m_data->cols;
+            m_data->order = rhs.m_data->order;
             m_data->array = std::move(rhs.m_data->array);
         }
         
@@ -272,8 +273,13 @@ namespace mafox
     {
         if(m_data->order != order)
         {
-            this->transpose();
-            m_data->order = order;
+            std::size_t r = rows(), c = cols();
+            Matrix<T> reordered(r, c, order);
+            for(std::size_t i = 0, j = 0; i < r; ++i)
+                for(j = 0; j < c; ++j)
+                    reordered.set_element(i, j, element(i, j));
+
+            *this = std::move(reordered);
         }
     }
 }

@@ -229,12 +229,21 @@ TEST_CASE("element", "[mafox::Matrix]")
     REQUIRE(m.element(0, 1) == m(0, 1));
     REQUIRE(m.element(1, 0) == m(1, 0));
     REQUIRE(m.element(1, 1) == m(1, 1));
+}
 
+TEST_CASE("set_order", "[mafox::Matrix]")
+{
+    Matrix<double> m(2, 3);
+    m.set_element(0, 0, 0.123);
+    m.set_element(1, 0, 0.111);
 
     Matrix<double> m1(2, 3, COL_MAJOR);
     m1.set_element(1, 0, 0.111);
 
     REQUIRE(m.data()[1*m.cols() + 0] == m1.data()[0*m1.rows() + 1]);
+
+    m1.set_order(ROW_MAJOR);
+    REQUIRE(m1(1, 0) == 0.111);
 }
 
 TEST_CASE("share", "[mafox::Matrix]")
