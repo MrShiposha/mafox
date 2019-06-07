@@ -2,6 +2,7 @@
 #define MAFOX_DETAIL_DEF_H
 
 #include <type_traits>
+#include <stdexcept>
 
 #include "../lib/metaxxa.hpp"
 
@@ -25,7 +26,13 @@
 
 namespace mafox
 {
-    using Byte = unsigned char;
+    class FatalError : public std::runtime_error
+    {
+    public:
+        using std::runtime_error::runtime_error;
+    };
 }
+
+#define MAFOX_FATAL(message) do { assert(false && message); throw mafox::FatalError(message); } while(0)
 
 #endif // MAFOX_DETAIL_DEF_H

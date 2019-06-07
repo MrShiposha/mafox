@@ -2,8 +2,12 @@
 #define MAFOX_HPP
 
 #include <type_traits>
+#include <stdexcept>
 #include <functional>
 #include <utility>
+#include <iostream>
+#include <iomanip>
+#include <memory>
 
 #ifndef MAFOX_H
 #define MAFOX_H
@@ -1973,10 +1977,586 @@ namespace std
 
 namespace mafox
 {
-    using Byte = unsigned char;
+    class FatalError : public std::runtime_error
+    {
+    public:
+        using std::runtime_error::runtime_error;
+    };
 }
 
+#define MAFOX_FATAL(message) do { assert(false && message); throw mafox::FatalError(message); } while(0)
+
 #endif // MAFOX_DETAIL_DEF_H
+
+#ifndef MAFOX_AMATRIX_INC
+#define MAFOX_AMATRIX_INC
+
+
+#ifndef MAFOX_AMATRIX_H
+#define MAFOX_AMATRIX_H
+
+
+
+#ifndef MAFOX_SIZE_H
+#define MAFOX_SIZE_H
+
+
+namespace mafox
+{
+    template <typename T>
+    struct Size2D
+    {
+        T width;
+        T height;
+    };
+
+    template <typename T>
+    struct Size3D
+    {
+        T width;
+        T height;
+        T length;
+    };
+}
+
+namespace std
+{
+    template <std::size_t INDEX, typename T>
+    class tuple_element<INDEX, mafox::Size2D<T>>
+    {
+    public:
+        using type = T;
+    };
+
+    template <typename T>
+    class tuple_size<mafox::Size2D<T>>
+    {
+    public:
+        static constexpr std::size_t value = 2;
+    };
+
+    template <std::size_t INDEX, typename T>
+    auto get(const mafox::Size2D<T> &size)
+    {
+        if constexpr(INDEX == 0)
+            return size.width;
+        else if constexpr(INDEX == 1)
+            return size.height;
+    }
+
+    template <std::size_t INDEX, typename T>
+    class tuple_element<INDEX, mafox::Size3D<T>>
+    {
+    public:
+        using type = T;
+    };
+
+    template <typename T>
+    class tuple_size<mafox::Size3D<T>>
+    {
+    public:
+        static constexpr std::size_t value = 3;
+    };
+
+    template <std::size_t INDEX, typename T>
+    auto get(const mafox::Size3D<T> &size)
+    {
+        if constexpr(INDEX == 0)
+            return size.width;
+        else if constexpr(INDEX == 1)
+            return size.height;
+        else if constexpr(INDEX == 1)
+            return size.length;
+    }
+}
+
+#endif // MAFOX_SIZE_H
+
+#define USING_MAFOX_MATRIX_TYPES(Matrix)                                         \
+    using data_t              = typename AMatrix<Matrix>::data_t;                \
+    using shared_data_t       = typename AMatrix<Matrix>::shared_data_t;         \
+    using const_shared_data_t = typename AMatrix<Matrix>::const_shared_data_t;   \
+    using difference_type_t   = typename AMatrix<Matrix>::difference_type;       \
+    using value_type          = typename AMatrix<Matrix>::value_type;            \
+    using pointer             = typename AMatrix<Matrix>::pointer;               \
+    using const_pointer       = typename AMatrix<Matrix>::const_pointer;         \
+    using reference           = typename AMatrix<Matrix>::reference;             \
+    using const_reference     = typename AMatrix<Matrix>::const_reference;       \
+    using Size                = typename AMatrix<Matrix>::Size
+
+#define MAFOX_DEFAULT_TRAITS(user_data_t)                          \
+        using data_t              = user_data_t;                   \
+        using shared_data_t       = std::shared_ptr<data_t>;       \
+        using const_shared_data_t = std::shared_ptr<const data_t>; \
+        using difference_type     = std::ptrdiff_t;                \
+        using value_type          = std::remove_cv_t<T>;           \
+        using pointer             = T *;                           \
+        using const_pointer       = const T *;                     \
+        using reference           = T &;                           \
+        using const_reference     = const T &
+
+namespace mafox
+{
+    template <typename Matrix>
+    struct MatrixTraits;
+
+    template <typename Matrix>
+    class AMatrix
+    {
+    public:
+        using Traits              = MatrixTraits<Matrix>;
+        using data_t              = typename Traits::data_t;
+        using shared_data_t       = typename Traits::shared_data_t;
+        using const_shared_data_t = typename Traits::const_shared_data_t;
+        using difference_type     = typename Traits::difference_type;
+        using value_type          = typename Traits::value_type;
+        using pointer             = typename Traits::pointer;
+        using const_pointer       = typename Traits::const_pointer;
+        using reference           = typename Traits::reference;
+        using const_reference     = typename Traits::const_reference;
+        
+        using Size                = Size2D<std::size_t>;
+
+        AMatrix() = default;
+
+        AMatrix(const AMatrix &) = default;
+
+        AMatrix(AMatrix &&) = default;
+
+        virtual ~AMatrix() = default;
+
+        AMatrix &operator=(const AMatrix &) = delete;
+
+        AMatrix &operator=(AMatrix &&) = delete;
+
+        virtual std::size_t rows() const = 0;
+
+        virtual std::size_t cols() const = 0;
+
+        Size size() const;
+
+        bool is_square() const;
+
+        virtual reference element(std::size_t i, std::size_t j) = 0;
+
+        virtual const_reference element(std::size_t i, std::size_t j) const = 0;
+
+        mafox_inline const_reference operator()(std::size_t i, std::size_t j) const;
+
+        virtual void set_element(std::size_t i, std::size_t j, const_reference) = 0;
+
+        virtual void transpose() = 0;
+
+        virtual Matrix transposed() = 0;
+
+        virtual void transpose_rsd() = 0;
+
+        virtual Matrix transposed_rsd() = 0;
+
+        virtual bool try_set_element(std::size_t i, std::size_t j, const_reference);
+
+        virtual shared_data_t shared_data() = 0;
+
+        virtual const_shared_data_t shared_cdata() const = 0;
+
+    private:
+    };
+}
+
+template <typename T>
+std::ostream &operator<<(std::ostream &, const mafox::AMatrix<T> &);
+
+#endif // MAFOX_AMATRIX_H
+
+namespace mafox
+{
+    template <typename Matrix>
+    typename AMatrix<Matrix>::Size AMatrix<Matrix>::size() const
+    {
+        return Size { rows(), cols() };
+    }
+
+    template <typename Matrix>
+    bool AMatrix<Matrix>::is_square() const
+    {
+        return rows() == cols();
+    }
+
+    template <typename Matrix>
+    mafox_inline typename AMatrix<Matrix>::const_reference 
+    AMatrix<Matrix>::operator()(std::size_t i, std::size_t j) const
+    {
+        return element(i, j);
+    }
+
+    template <typename Matrix>
+    bool AMatrix<Matrix>::try_set_element(std::size_t i, std::size_t j, const_reference value)
+    {
+        set_element(i, j, value);
+        return true;
+    }
+}
+
+template <typename T>
+std::ostream &operator<<(std::ostream &os, const mafox::AMatrix<T> &matrix)
+{
+    std::streamsize width = os.width();
+    std::streamsize precision = os.precision();
+
+    for(std::size_t i = 0, j = 0; i < matrix.rows(); ++i)
+    {
+        for(j = 0; j < matrix.cols(); ++j)
+            os << std::setw(width) << std::setprecision(precision) << matrix.element(i, j) << ' ';
+        os << '\n';
+    }
+
+    return os << std::flush;
+}
+
+#endif // MAFOX_AMATRIX_INC
+
+#ifndef MAFOX_MATRIX_INC
+#define MAFOX_MATRIX_INC
+
+
+#ifndef MAFOX_MATRIX_H
+#define MAFOX_MATRIX_H
+
+
+
+#ifndef MAFOX_MATRIXORDER_H
+#define MAFOX_MATRIXORDER_H
+
+namespace mafox
+{
+    enum MatrixOrder
+    {
+        ROW_MAJOR,
+        COL_MAJOR
+    };
+}
+
+#endif // MAFOX_MATRIXORDER_H
+
+namespace mafox
+{
+    template <typename T>
+    class matrix_data_t;
+
+    template <typename T>
+    class Matrix;
+
+    template <typename T>
+    struct MatrixTraits<Matrix<T>>
+    {
+        MAFOX_DEFAULT_TRAITS(matrix_data_t<T>);
+    };
+
+    template <typename T>
+    class Matrix : public AMatrix<Matrix<T>>
+    {
+    public:
+        USING_MAFOX_MATRIX_TYPES(Matrix);
+
+        Matrix(std::size_t rows, std::size_t cols, MatrixOrder = MatrixOrder::ROW_MAJOR);
+
+        // template <typename Iterator>
+        // Matrix(Iterator begin, Iterator end);
+
+        // Matrix(std::initializer_list<std::initializer_list<T>>);
+
+        Matrix(const Matrix &);
+
+        Matrix(Matrix &&);
+
+        virtual ~Matrix();
+
+        Matrix &operator=(const Matrix &);
+
+        Matrix &operator=(Matrix &&);
+
+        mafox_inline virtual std::size_t rows() const override;
+
+        mafox_inline virtual std::size_t cols() const override;
+
+        virtual reference element(std::size_t i, std::size_t j) override;
+
+        virtual const_reference element(std::size_t i, std::size_t j) const override;
+
+        virtual void set_element(std::size_t i, std::size_t j, const_reference) override;
+
+        virtual void transpose() override;
+
+        virtual Matrix<T> transposed() override;
+
+        virtual void transpose_rsd() override;
+
+        virtual Matrix<T> transposed_rsd() override;
+
+        virtual shared_data_t shared_data() override;
+
+        virtual const_shared_data_t shared_cdata() const override;
+
+        pointer data();
+
+        const_pointer cdata() const;
+
+        MatrixOrder order() const;
+
+        void set_order(MatrixOrder);
+
+    private:
+        shared_data_t m_data;
+    };
+}
+
+#endif // MAFOX_MATRIX_H
+
+namespace mafox
+{
+    template <typename T>
+    class matrix_data_t
+    {
+        matrix_data_t(std::size_t rows, std::size_t cols, MatrixOrder order, std::unique_ptr<T[]> &&array)
+        : rows(rows), cols(cols), order(order), array(std::forward<std::unique_ptr<T[]>>(array))
+        {}
+
+        matrix_data_t(std::size_t rows, std::size_t cols, MatrixOrder order)
+        : rows(rows), cols(cols), order(order), array(new T[rows*cols])
+        {}
+        
+    public:
+        static auto make(std::size_t rows, std::size_t cols, MatrixOrder order, std::unique_ptr<T[]> &&array)
+        {
+            return std::shared_ptr<matrix_data_t<T>>
+            (
+                new matrix_data_t<T>
+                (
+                    rows, 
+                    cols, 
+                    order, 
+                    std::forward<std::unique_ptr<T[]>>(array)
+                )
+            );
+        }
+
+        static auto make(std::size_t rows, std::size_t cols, MatrixOrder order)
+        {
+            return std::shared_ptr<matrix_data_t<T>>
+            (
+                new matrix_data_t<T>
+                (
+                    rows, 
+                    cols, 
+                    order
+                )
+            );
+        }
+
+        std::size_t rows;
+        std::size_t cols;
+        MatrixOrder order;
+
+        std::unique_ptr<T[]> array; 
+    };
+
+    template <typename T>
+    Matrix<T>::Matrix(std::size_t rows, std::size_t cols, MatrixOrder order)
+    : m_data(matrix_data_t<T>::make(rows, cols, order))
+    {
+        std::size_t sz = rows * cols * sizeof(T);
+        memset_s(data(), sz, 0, sz);
+    }
+
+    // template <typename T>
+    // template <typename Iterator>
+    // Matrix<T>::Matrix(Iterator begin, Iterator end)
+    // {}
+
+    // template <typename T>
+    // Matrix<T>::Matrix(std::initializer_list<std::initializer_list<T>> list)
+    // {}
+
+    template <typename T>
+    Matrix<T>::Matrix(const Matrix &other)
+    : m_data(matrix_data_t<T>::make(other.rows(), other.cols(), other.order()))
+    {
+        memcpy(m_data->array.get(), other.m_data->array.get(), m_data->rows * m_data->cols * sizeof(T));
+    }
+
+    template <typename T>
+    Matrix<T>::Matrix(Matrix &&other)
+    : m_data(matrix_data_t<T>::make(other.rows(), other.cols(), other.order(), std::move(other.m_data->array)))
+    {}
+
+    template <typename T>
+    Matrix<T>::~Matrix()
+    {}
+
+    template <typename T>
+    Matrix<T> &Matrix<T>::operator=(const Matrix &rhs)
+    {
+        if(this != &rhs)
+            *this = std::move(Matrix<T>(rhs));
+        
+        return *this;
+    }
+
+    template <typename T>
+    Matrix<T> &Matrix<T>::operator=(Matrix &&rhs)
+    {
+        if(this != &rhs)
+        {
+            m_data->rows  = rhs.m_data->rows;
+            m_data->cols  = rhs.m_data->cols;
+            m_data->array = std::move(rhs.m_data->array);
+        }
+        
+        return *this;
+    }
+
+    template <typename T>
+    mafox_inline std::size_t Matrix<T>::rows() const
+    {
+        return m_data->rows;
+    }
+
+    template <typename T>
+    mafox_inline std::size_t Matrix<T>::cols() const
+    {
+        return m_data->cols;
+    }
+
+    template <typename T>
+    typename Matrix<T>::reference Matrix<T>::element(std::size_t i, std::size_t j)
+    {
+        assert(i < rows() && j < cols());
+
+        if(order() == ROW_MAJOR)
+            return data()[i*cols() + j];
+        else if(order() == COL_MAJOR)
+            return data()[j*rows() + i];
+        else
+            MAFOX_FATAL("Unknown matrix order");
+    }
+
+    template <typename T>
+    typename Matrix<T>::const_reference Matrix<T>::element(std::size_t i, std::size_t j) const
+    {
+        return const_cast<Matrix<T>*>(this)->element(i, j);
+    }
+
+    template <typename T>
+    void Matrix<T>::set_element(std::size_t i, std::size_t j, const_reference value)
+    {
+        element(i, j) = value;
+    }
+
+    template <typename T>
+    void Matrix<T>::transpose()
+    {
+        if(this->is_square())
+        {
+            std::size_t sz = rows();
+            for(std::size_t i = 1, j = 0, diff = 0; i < sz; ++i)
+                for(j = i; j > 0; --j)
+                {
+                    diff = i-j;
+                    std::swap(element(i, diff), element(diff, i));
+                }
+
+            std::swap(m_data->rows, m_data->cols);        
+        }
+        else
+            *this = std::move(transposed());
+    }
+
+    template <typename T>
+    Matrix<T> Matrix<T>::transposed()
+    {
+        std::size_t r = rows(), c = cols();
+        Matrix<T> result(c, r);
+
+        for(std::size_t i = 0, j = 0; i < r; ++i)
+            for(j = 0; j < c; ++j)
+                result.set_element(j, i, element(i, j));
+
+        return result;
+    }
+
+    template <typename T>
+    void Matrix<T>::transpose_rsd()
+    {
+        if(this->is_square())
+        {
+            std::size_t sz = rows();
+            for(std::size_t i = 0, j = 0, diff = 0; i < sz; ++i)
+                for(diff = sz-i-1, j = diff; j > 0; --j)
+                {
+                    std::swap(element(diff-j, i), element(diff, i+j));
+                }
+
+            std::swap(m_data->rows, m_data->cols);        
+        }
+        else
+            *this = std::move(transposed_rsd());
+    }
+
+    template <typename T>
+    Matrix<T> Matrix<T>::transposed_rsd()
+    {
+        std::size_t r = rows(), c = cols();
+        Matrix<T> result(c, r);
+
+        for(std::size_t i = 0, j = 0; i < r; ++i)
+            for(j = 0; j < c; ++j)
+                result.set_element(c - j - 1, r - i - 1, element(i, j));
+
+        return result;
+    }
+
+    template <typename T>
+    typename Matrix<T>::shared_data_t Matrix<T>::shared_data()
+    {
+        return m_data;
+    }
+
+    template <typename T>
+    typename Matrix<T>::const_shared_data_t Matrix<T>::shared_cdata() const
+    {
+        return m_data;
+    }
+
+    template <typename T>
+    typename Matrix<T>::pointer Matrix<T>::data()
+    {
+        return m_data->array.get();
+    }
+
+    template <typename T>
+    typename Matrix<T>::const_pointer Matrix<T>::cdata() const
+    {
+        return m_data->array.get();
+    }
+
+    template <typename T>
+    MatrixOrder Matrix<T>::order() const
+    {
+        return m_data->order;
+    }
+
+    template <typename T>
+    void Matrix<T>::set_order(MatrixOrder order)
+    {
+        if(m_data->order != order)
+        {
+            this->transpose();
+            m_data->order = order;
+        }
+    }
+}
+
+#endif // MAFOX_MATRIX_INC
 
 #endif // MAFOX_H
 
