@@ -3248,7 +3248,10 @@ namespace mafox
     {
     public:
         using AVector<Vector<T>>::set_element;
+        using AVector<Vector<T>>::operator();
+
         using Matrix<T>::set_element;
+        using Matrix<T>::operator();
 
         template <typename ___MAFOX_T>
         using vector_t = Vector<___MAFOX_T>;
