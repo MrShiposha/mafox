@@ -5,8 +5,13 @@
 
 namespace mafox
 {
+    struct MatrixTag 
+    {
+        virtual ~MatrixTag() = default;
+    };
+
     template <typename T>
-    class IMatrix
+    class IMatrix : public MatrixTag
     {
     public:
         using difference_type     = std::ptrdiff_t;
