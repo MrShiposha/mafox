@@ -3782,7 +3782,7 @@ namespace mafox
     struct UnknownVariable
     {};
 
-    mafox_inline auto unknown_variable();
+    static inline constexpr UnknownVariable X; 
 
     template <typename Matrix>
     auto operator*(const Matrix &, UnknownVariable)
@@ -3794,11 +3794,6 @@ namespace mafox
 
 namespace mafox
 {
-    mafox_inline auto unknown_variable() 
-    { 
-        return UnknownVariable(); 
-    }
-
     template <typename Matrix>
     auto operator*(const Matrix &matrix, UnknownVariable)
         -> HomogeneousMatrixEquation<Matrix>

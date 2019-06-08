@@ -2,8 +2,6 @@
 
 TEST_CASE("MatrixEquation(tridiagonal)")
 {
-    auto x = unknown_variable();
-
     TridiagonalMatrix<double> m(3);
     m.set_element(0, 0, 1);
     m.set_element(0, 1, -2);
@@ -20,7 +18,7 @@ TEST_CASE("MatrixEquation(tridiagonal)")
     v.set_element(1, 200);
     v.set_element(2, 300);
 
-    auto solution = (m*x + v).solve();
+    auto solution = (m*X + v).solve();
 
     REQUIRE(solution(0) == Approx(-10));
     REQUIRE(solution(1) == Approx(-55));

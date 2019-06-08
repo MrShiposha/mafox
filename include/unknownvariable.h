@@ -11,7 +11,7 @@ namespace mafox
     struct UnknownVariable
     {};
 
-    mafox_inline auto unknown_variable();
+    static inline constexpr UnknownVariable X; 
 
     template <typename Matrix>
     auto operator*(const Matrix &, UnknownVariable)

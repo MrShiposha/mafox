@@ -6,11 +6,6 @@
 
 namespace mafox
 {
-    mafox_inline auto unknown_variable() 
-    { 
-        return UnknownVariable(); 
-    }
-
     template <typename Matrix>
     auto operator*(const Matrix &matrix, UnknownVariable)
         -> HomogeneousMatrixEquation<Matrix>
