@@ -43,7 +43,7 @@ namespace mafox
         auto FDMMatrixBuilderACoeff<HAS_A, T, Generators...>::a_coeff(const Callable &generator)
             -> FDMMatrixBuilder<T, Generators..., FDMCoeffGenerator<FDMCoeff::A, Callable>>
         {
-            auto *self = reinterpret_cast<SelfType *>(this);
+            auto *self = static_cast<SelfType *>(this);
 
             return FDMMatrixBuilder<T, Generators..., FDMCoeffGenerator<FDMCoeff::A, Callable>>
             (
@@ -63,7 +63,7 @@ namespace mafox
         auto FDMMatrixBuilderBCoeff<HAS_B, T, Generators...>::b_coeff(const Callable &generator)
             -> FDMMatrixBuilder<T, Generators..., FDMCoeffGenerator<FDMCoeff::B, Callable>>
         {
-            auto *self = reinterpret_cast<SelfType *>(this);
+            auto *self = static_cast<SelfType *>(this);
 
             return FDMMatrixBuilder<T, Generators..., FDMCoeffGenerator<FDMCoeff::B, Callable>>
             (
@@ -83,7 +83,7 @@ namespace mafox
         auto FDMMatrixBuilderCCoeff<HAS_C, T, Generators...>::c_coeff(const Callable &generator)
             -> FDMMatrixBuilder<T, Generators..., FDMCoeffGenerator<FDMCoeff::C, Callable>>
         {
-            auto *self = reinterpret_cast<SelfType *>(this);
+            auto *self = static_cast<SelfType *>(this);
 
             return FDMMatrixBuilder<T, Generators..., FDMCoeffGenerator<FDMCoeff::C, Callable>>
             (

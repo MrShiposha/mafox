@@ -7,6 +7,4 @@ TEST_CASE("fdm_matrix")
         .c_coeff([](auto x) { return x*10; })
         .b_coeff([](auto x) { return x; })
         .compute();
-
-    std::cout << std::setw(5) << m << std::endl;
 }
