@@ -4,7 +4,7 @@
 #include <type_traits>
 #include <stdexcept>
 
-#include "../lib/metaxxa.hpp"
+#include "../lib/metaxxa/metaxxa.hpp"
 
 #ifdef _MSC_VER
     #define mafox_inline __forceinline
