@@ -9,6 +9,7 @@
 #include <iomanip>
 #include <memory>
 #include <cstring>
+#include <cmath>
 #include <tuple>
 
 #ifndef MAFOX_H
@@ -3269,6 +3270,7 @@ namespace mafox
 #define MAFOX_FDMMATRIX_INC
 
 
+
 #ifndef MAFOX_FDMMATRIX_H
 #define MAFOX_FDMMATRIX_H
 
@@ -3566,7 +3568,7 @@ namespace mafox
                 std::invoke_result_t<typename FindC::Type, T>
             >;
 
-            std::size_t result_size = static_cast<std::size_t>((self->end - self->begin) / self->step);
+            std::size_t result_size = static_cast<std::size_t>(std::round((self->end - self->begin) / self->step));
 
             if(result_size < 3)
                 MAFOX_FATAL("Unable to create a finite difference matrix with less than 3 cells");
