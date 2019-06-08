@@ -16,7 +16,7 @@ namespace mafox
     template <typename T>
     struct MatrixTraits<BandMatrix<T>>
     {
-        MAFOX_DEFAULT_TRAITS(T, band_matrix_data_t<T>);
+        MAFOX_DEFAULT_MATRIX_TRAITS(BandMatrix, T, band_matrix_data_t<T>);
     };
 
     template <typename T>

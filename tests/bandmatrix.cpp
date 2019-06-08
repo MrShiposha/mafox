@@ -353,3 +353,10 @@ TEST_CASE("diagonal of band matrix", "[mafox::BandMatrix]")
     REQUIRE(m.upper_diagonal_data(0)[1] == 200);
     REQUIRE(m.upper_diagonal_data(1)[0] == 100);
 }
+
+TEST_CASE("matrix_t of band matrix", "[mafox::BandMatrix]")
+{
+    using Matrix = BandMatrix<double>;
+    using Expected = BandMatrix<int>;
+    static_assert(std::is_same_v<typename Matrix::template matrix_t<int>, Expected>);
+}
