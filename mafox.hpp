@@ -3767,7 +3767,7 @@ namespace mafox
 
         // TODO for lvalue eq and rvalue vector
         template <typename Vector>
-        auto operator+(const Vector &) const &&
+        auto operator=(const Vector &) const &&
             -> MatrixEquation<Matrix, Vector>;
 
         // TODO auto solve();
@@ -3926,7 +3926,7 @@ namespace mafox
 
     template <typename Matrix>
     template <typename Vector>
-    auto HomogeneousMatrixEquation<Matrix>::operator+(const Vector &vector) const &&
+    auto HomogeneousMatrixEquation<Matrix>::operator=(const Vector &vector) const &&
         -> MatrixEquation<Matrix, Vector>
     {
         assert(vector.dimension() == matrix.rows());

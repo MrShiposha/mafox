@@ -30,7 +30,7 @@ namespace mafox
 
         // TODO for lvalue eq and rvalue vector
         template <typename Vector>
-        auto operator+(const Vector &) const &&
+        auto operator=(const Vector &) const &&
             -> MatrixEquation<Matrix, Vector>;
 
         // TODO auto solve();

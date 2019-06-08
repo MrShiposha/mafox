@@ -22,7 +22,7 @@ namespace mafox
 
     template <typename Matrix>
     template <typename Vector>
-    auto HomogeneousMatrixEquation<Matrix>::operator+(const Vector &vector) const &&
+    auto HomogeneousMatrixEquation<Matrix>::operator=(const Vector &vector) const &&
         -> MatrixEquation<Matrix, Vector>
     {
         assert(vector.dimension() == matrix.rows());
