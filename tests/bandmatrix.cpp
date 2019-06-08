@@ -328,3 +328,28 @@ TEST_CASE("transpose_rsd band matrix", "[mafox::BandMatrix]")
         REQUIRE(m(2, 1) == 2);
     }
 }
+
+TEST_CASE("diagonal of band matrix", "[mafox::BandMatrix]")
+{
+    BandMatrix<double> m(3, 1, 2);
+
+    m.set_element(0, 0, 1);
+    m.set_element(0, 1, 10);
+    m.set_element(0, 2, 100);
+    m.set_element(1, 0, 2);
+    m.set_element(1, 1, 20);
+    m.set_element(1, 2, 200);
+    m.set_element(2, 1, 30);
+    m.set_element(2, 2, 300);
+
+    REQUIRE(m.diagonal_data()[0] == 1);
+    REQUIRE(m.diagonal_data()[1] == 20);
+    REQUIRE(m.diagonal_data()[2] == 300);
+
+    REQUIRE(m.lower_diagonal_data(0)[0] == 2);
+    REQUIRE(m.lower_diagonal_data(0)[1] == 30);
+
+    REQUIRE(m.upper_diagonal_data(0)[0] == 10);
+    REQUIRE(m.upper_diagonal_data(0)[1] == 200);
+    REQUIRE(m.upper_diagonal_data(1)[0] == 100);
+}
