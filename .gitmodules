@@ -1,0 +1,3 @@
+[submodule "lib/metaxxa"]
+	path = lib/metaxxa
+	url = https://github.com/MrShiposha/metaxxa

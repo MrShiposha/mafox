@@ -17,11 +17,19 @@ namespace mafox
 
         TridiagonalMatrix(TridiagonalMatrix &&) = default;
 
-        virtual ~TridiagonalMatrix();
+        virtual ~TridiagonalMatrix() = default;
 
         TridiagonalMatrix &operator=(const TridiagonalMatrix &) = default;
 
         TridiagonalMatrix &operator=(TridiagonalMatrix &&) = default;
+
+        pointer lower_diagonal_data();
+
+        const_pointer lower_diagonal_cdata() const;
+
+        pointer upper_diagonal_data();
+
+        const_pointer upper_diagonal_cdata() const;
     };
 
     template <typename T>

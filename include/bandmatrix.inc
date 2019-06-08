@@ -96,7 +96,9 @@ namespace mafox
     template <typename T>
     BandMatrix<T>::BandMatrix(std::size_t size, std::size_t lower_bandwidth, std::size_t upper_bandwidth)
     : m_data(band_matrix_data_t<T>::make(size, lower_bandwidth, upper_bandwidth))
-    {}
+    {
+        assert(lower_bandwidth < size && upper_bandwidth < size);
+    }
 
     template <typename T>
     BandMatrix<T>::BandMatrix(const BandMatrix &other)
@@ -280,6 +282,46 @@ namespace mafox
     std::size_t BandMatrix<T>::upper_bandwidth() const
     {
         return m_data->u;
+    }
+
+    template <typename T>
+    typename BandMatrix<T>::pointer BandMatrix<T>::diagonal_data()
+    {
+        return m_data->arrays[m_data->l].get();
+    }
+
+    template <typename T>
+    typename BandMatrix<T>::const_pointer BandMatrix<T>::diagonal_cdata() const
+    {
+        return const_cast<BandMatrix<T>*>(this)->diagonal_data();
+    }
+
+    template <typename T>
+    typename BandMatrix<T>::pointer BandMatrix<T>::lower_diagonal_data(std::size_t level)
+    {
+        assert(level < lower_bandwidth());
+
+        return m_data->arrays[m_data->l - (level + 1)].get();
+    }
+
+    template <typename T>
+    typename BandMatrix<T>::const_pointer BandMatrix<T>::lower_diagonal_cdata(std::size_t level) const
+    {
+        return const_cast<BandMatrix<T>*>(this)->lower_diagonal_data(level);
+    }
+
+    template <typename T>
+    typename BandMatrix<T>::pointer BandMatrix<T>::upper_diagonal_data(std::size_t level)
+    {
+        assert(level < upper_bandwidth());
+
+        return m_data->arrays[m_data->l + level + 1].get();
+    }
+
+    template <typename T>
+    typename BandMatrix<T>::const_pointer BandMatrix<T>::upper_diagonal_cdata(std::size_t level) const
+    {
+        return const_cast<BandMatrix<T>*>(this)->upper_diagonal_data(level);
     }
 }
 

@@ -74,6 +74,18 @@ namespace mafox
 
         std::size_t upper_bandwidth() const;
 
+        pointer diagonal_data();
+
+        const_pointer diagonal_cdata() const;
+
+        pointer lower_diagonal_data(std::size_t level);
+
+        const_pointer lower_diagonal_cdata(std::size_t level) const;
+
+        pointer upper_diagonal_data(std::size_t level);
+
+        const_pointer upper_diagonal_cdata(std::size_t level) const;
+
     private:
         virtual reference element(std::size_t i, std::size_t j) override;
 
