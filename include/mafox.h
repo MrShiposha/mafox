@@ -8,4 +8,6 @@
 #include "bandmatrix.inc"
 #include "tridiagonalmatrix.inc"
 
+#include "fdm.h"
+
 #endif // MAFOX_H

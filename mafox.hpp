@@ -3,12 +3,13 @@
 
 #include <type_traits>
 #include <stdexcept>
-#include <functional>
 #include <utility>
+#include <functional>
 #include <iostream>
 #include <iomanip>
 #include <memory>
 #include <cstring>
+#include <tuple>
 
 #ifndef MAFOX_H
 #define MAFOX_H
@@ -62,10 +63,6 @@
 #else
     #define metaxxa_inline inline
 #endif
-
-#if __has_include("metaxxa_specs.h")
-#   include "metaxxa_specs.h"
-#endif // specializations
 
 #endif // METAXXA_DEF_H
 
@@ -221,7 +218,7 @@ namespace metaxxa
     {
         using Type = T;
 
-        static constexpr Type value() { return LITERAL; }
+        static constexpr Type value = LITERAL;
     };
 
 }
@@ -255,7 +252,7 @@ namespace metaxxa
     template <typename LiteralH = LiteralNil, typename... LiteralTail>
     struct LiteralCdrT
     {
-        using Tail = LiteralList<typename LiteralH::Type, LiteralTail::value()...>;
+        using Tail = LiteralList<typename LiteralH::Type, LiteralTail::value...>;
     };
 
     template <typename LiteralT>
@@ -275,12 +272,13 @@ namespace metaxxa
     {
         using Head = LiteralCar<Literal<T, LITERALS>...>;
         using Tail = LiteralCdr<Literal<T, LITERALS>...>;
+        using IntegerSequence = std::integer_sequence<T, LITERALS...>;
 
         using HeadType = typename Head::Type;
 
         static constexpr HeadType head()
         {
-            return Head::value();
+            return Head::value;
         }
     };
 
@@ -289,6 +287,7 @@ namespace metaxxa
     {
         using Head = LiteralNil;
         using Tail = LiteralNil;
+        using IntegerSequence = std::integer_sequence<T>;
 
         using HeadType = LiteralNilT;
 
@@ -297,6 +296,54 @@ namespace metaxxa
             return NIL;
         }
     };
+
+    namespace detail
+    {
+        template 
+        <
+            template <typename T, T...> typename SequenceT,
+            typename LiteralT, 
+            LiteralT... LITERALS
+        >
+        constexpr auto literal_list_from_sequence(SequenceT<LiteralT, LITERALS...>)
+            -> LiteralList<LiteralT, LITERALS...>;
+    }
+
+    template <typename Sequence>
+    using LiteralListFromSequence = decltype(detail::literal_list_from_sequence(std::declval<Sequence>()));
+}
+
+namespace std
+{
+    template <typename T, T... LITERALS>
+    class tuple_size<metaxxa::LiteralList<T, LITERALS...>>
+        : public std::integral_constant<std::size_t, sizeof...(LITERALS)>
+    {};
+
+    template <typename T>
+    class tuple_size<metaxxa::LiteralList<T>>
+        : public std::integral_constant<std::size_t, 0>
+    {};
+
+    template <size_t INDEX, typename T, T... LITERALS>
+	class tuple_element<INDEX, metaxxa::LiteralList<T, LITERALS...>>
+        : public tuple_element<INDEX - 1, typename metaxxa::LiteralList<T, LITERALS...>::Tail>
+	{};
+
+    template <size_t INDEX>
+	class tuple_element<INDEX, metaxxa::LiteralNil>
+    {};
+
+    template <>
+	class tuple_element<0, metaxxa::LiteralNil>
+    {};
+
+    template <typename T, T... LITERALS>
+	class tuple_element<0, metaxxa::LiteralList<T, LITERALS...>>
+	{
+	public:
+		using type = typename metaxxa::LiteralList<T, LITERALS...>::Head;
+	};
 }
 
 template <typename T>
@@ -335,23 +382,28 @@ namespace metaxxa
 {
     namespace detail
     {
-        template
-        <
-            template <typename...> typename DestTemplate,
-            template <typename...> typename SrcTemplate,
-            typename... Args
-        >
-        constexpr auto move_parameters(SrcTemplate<Args...> &&) -> TypeSaver<DestTemplate<Args...>>;
+        template <typename... StartTypes>
+        struct Mover
+        {
+            template
+            <
+                template <typename...> typename DestTemplate,
+                template <typename...> typename SrcTemplate,
+                typename... Args
+            >
+            static constexpr auto move_parameters(SrcTemplate<Args...> &&) -> TypeSaver<DestTemplate<StartTypes..., Args...>>;
+        };
     }
 
     template 
     <
         template <typename...> typename DestTemplate,
-        typename SrcTemplate
+        typename SrcTemplate,
+        typename... StartTypes
     >
     using MoveParameters = typename decltype
     (
-        detail::move_parameters<DestTemplate>(std::declval<SrcTemplate>())
+        detail::Mover<StartTypes...>::template move_parameters<DestTemplate>(std::declval<SrcTemplate>())
     )::Type;
 }
 
@@ -489,6 +541,16 @@ namespace metaxxa
         using Concat = Concat<metaxxa::TypeTuple, TypeTuple, RHS...>;
 
         constexpr TypeTuple() = default;
+
+        constexpr TypeTuple(const TypeTuple &) = default;
+
+        constexpr TypeTuple(TypeTuple &&) = default;
+
+        virtual ~TypeTuple() = default;
+
+        TypeTuple &operator=(const TypeTuple &) = default;
+
+        TypeTuple &operator=(TypeTuple &&) = default;
 
         static constexpr bool is_empty();
 
@@ -696,27 +758,10 @@ namespace metaxxa
 #define METAXXA_SIZECONSTANT_H
 
 
-
-#ifndef METAXXA_VALUEMETHOD_H
-#define METAXXA_VALUEMETHOD_H
-
-namespace metaxxa
-{
-    template <typename T>
-    struct ValueMethod
-    {
-        using Type = typename T::value_type;
-
-        static constexpr Type value() { return T::value; }
-    };
-}
-
-#endif // METAXXA_VALUEMETHOD_H
-
 namespace metaxxa
 {
     template <std::size_t INDEX>
-    using SizeConstant = ValueMethod<std::integral_constant<std::size_t, INDEX>>;
+    using SizeConstant = std::integral_constant<std::size_t, INDEX>;
 }
 
 #endif // METAXXA_SIZECONSTANT_H
@@ -741,7 +786,7 @@ namespace metaxxa
     template <typename T>
     constexpr std::size_t parameters_count() 
     {
-        return ParametersCount<T>::value();
+        return ParametersCount<T>::value;
     }
 }
 
@@ -774,112 +819,6 @@ namespace metaxxa
 
 #endif // METAXXA_INDEXRANGE_H
 
-
-#ifndef METAXXA_TUPLE_H
-#define METAXXA_TUPLE_H
-
-
-
-namespace metaxxa
-{
-    template <typename... Types>
-    class Tuple : public TypeTuple<Types...>
-    {
-    public:
-        using TypeTuple = metaxxa::TypeTuple<Types...>;
-
-        Tuple();
-
-        Tuple(Types&&... args);
-
-        Tuple(const Types&... args);
-
-        template <typename TupleT>
-        Tuple(const TupleT &);
-
-        Tuple(const Tuple &);
-
-        Tuple(Tuple &&);
-
-        ~Tuple();
-
-        template <typename TupleT>
-        Tuple &operator=(const TupleT &);
-
-        Tuple &operator=(const Tuple &);
-
-        Tuple &operator=(Tuple &&);
-
-        template <std::size_t INDEX>
-        metaxxa_inline auto &get();
-
-        template <std::size_t INDEX>
-        metaxxa_inline const auto &get() const;
-
-        template <typename T>
-        metaxxa_inline auto &get(std::size_t index);
-
-        template <typename T>
-        metaxxa_inline const auto &get(std::size_t index) const;
-
-        metaxxa_inline void *get(std::size_t index);
-
-        metaxxa_inline const void *get(std::size_t index) const;
-
-    private:
-        template <std::size_t... INDICES>
-        metaxxa_inline void construct(std::index_sequence<INDICES...>);
-
-        template <std::size_t... INDICES>
-        metaxxa_inline void construct(Types&&... args, std::index_sequence<INDICES...>);
-
-        template <std::size_t... INDICES>
-        metaxxa_inline void construct(const Types&... args, std::index_sequence<INDICES...>);
-
-        template <typename OtherTuple, std::size_t... INDICES>
-        metaxxa_inline void construct(const OtherTuple &other, std::index_sequence<INDICES...>);
-
-        template <std::size_t... INDICES>
-        metaxxa_inline void deallocate(std::index_sequence<INDICES...>);
-
-        template <std::size_t INDEX, typename T>
-        metaxxa_inline void deallocate();
-
-        unsigned char *data;
-        std::size_t    offsets[TypeTuple::size()];
-    };
-
-    template <typename TupleT>
-    using TupleFrom = MoveParameters<Tuple, TupleT>;
-}
-
-namespace std
-{
-    template <std::size_t INDEX, typename... Args>
-    class tuple_element<INDEX, metaxxa::Tuple<Args...>>
-    {
-    public:
-        using type = std::tuple_element_t<INDEX, typename metaxxa::Tuple<Args...>::TypeTuple>;
-    };
-
-    template <typename... Args>
-    class tuple_size<metaxxa::Tuple<Args...>>
-    {
-    public:
-        static constexpr std::size_t value = std::tuple_size_v<typename metaxxa::Tuple<Args...>::TypeTuple>;
-    };
-
-    template <std::size_t INDEX, typename... Args>
-    auto &get(metaxxa::Tuple<Args...> &);
-
-    template <std::size_t INDEX, typename... Args>
-    auto &get(const metaxxa::Tuple<Args...> &);
-
-    template <typename Callable, typename... Args>
-    constexpr auto apply(Callable &&, metaxxa::Tuple<Args...> &&);
-}
-
-#endif // METAXXA_TUPLE_H
 
 #ifndef METAXXA_ALGORITHM_H
 #define METAXXA_ALGORITHM_H
@@ -1064,7 +1003,7 @@ namespace metaxxa
         TupleT,                                                 \
         Functor,                                                \
         N + 1,                                                  \
-        Functor<__VA_ARGS__>::value(),                          \
+        Functor<__VA_ARGS__>::value,                            \
         N + 1 >= std::tuple_size_v<TupleT>                      \
     >                                                           \
     {};                                                         \
@@ -1119,6 +1058,16 @@ namespace metaxxa
 {
     namespace detail
     {
+        template <typename E>
+        struct IsEqualTo
+        {
+            template <typename T>
+            struct Type
+            {
+                static constexpr bool value = std::is_same_v<T, E>;
+            };
+        };
+
         #define FUNCTOR_TYPE template <typename T> typename Functor
 
         DEFINE_FIND_ALGORITHM(, std::tuple_element_t<N, TupleT>);
@@ -1140,6 +1089,13 @@ namespace metaxxa
         template <typename T> typename Functor
     >
     using Find = detail::Find<TupleT, Functor>;
+
+    template
+    <
+        typename TupleT,
+        typename T
+    >
+    using FindEqual = detail::Find<TupleT, detail::IsEqualTo<T>::template Type>;
 
     template 
     <
@@ -1230,7 +1186,7 @@ namespace metaxxa
                     <
                         TupleT, 
                         INDICES, 
-                        Functor<std::tuple_element_t<INDICES, TupleT>>::value()
+                        Functor<std::tuple_element_t<INDICES, TupleT>>::value
                     >::Type...
                 >;
 
@@ -1249,7 +1205,7 @@ namespace metaxxa
                     <
                         TupleT, 
                         INDICES, 
-                        Functor<std::tuple_element_t<INDICES, TupleT>, INDICES>::value()
+                        Functor<std::tuple_element_t<INDICES, TupleT>, INDICES>::value
                     >::Type...
                 >;
 
@@ -1268,7 +1224,7 @@ namespace metaxxa
                     <
                         TupleT, 
                         INDICES, 
-                        Functor<std::tuple_element_t<INDICES, TupleT>, INDICES, TupleT>::value()
+                        Functor<std::tuple_element_t<INDICES, TupleT>, INDICES, TupleT>::value
                     >::Type...
                 >;
     }
@@ -1324,39 +1280,272 @@ namespace metaxxa
 
 #endif // METAXXA_ALGORITHM_FILTER_H
 
-#ifndef METAXXA_ALGORITHM_APPLY_INC
-#define METAXXA_ALGORITHM_APPLY_INC
+#ifndef METAXXA_ALGORITHM_EVERY_H
+#define METAXXA_ALGORITHM_EVERY_H
 
 
 namespace metaxxa
 {
     namespace detail
     {
-        template <typename Callable, typename Tuple, std::size_t... INDICES>
-        auto apply(Callable &&function, Tuple &&tuple, std::index_sequence<INDICES...>)
+        template 
+        <
+            template <typename> typename Predicate,
+            typename TupleT, 
+            std::size_t... INDICES
+        >
+        constexpr bool every(std::index_sequence<INDICES...>)
         {
-            return std::invoke
-            (
-                std::forward<Callable>(function), 
-                std::get<INDICES>(std::forward<Tuple>(tuple))...
-            );
+            return (true && ... && Predicate<std::tuple_element_t<INDICES, TupleT>>::value);
         }
     }
 
-    template <typename Function, typename Tuple>
-    constexpr auto apply(Function &&function, Tuple &&tuple)
+    template
+    <
+        template <typename> typename Predicate,
+        typename TupleT
+    >
+    struct Every 
+        : public std::bool_constant
+        <
+            detail::every<Predicate, TupleT>(std::make_index_sequence<std::tuple_size_v<TupleT>>())
+        >
+    {};
+
+    template
+    <
+        template <typename> typename Predicate,
+        typename TupleT
+    >
+    constexpr bool every = Every<Predicate, TupleT>::value;
+}
+
+#endif // METAXXA_ALGORITHM_EVERY_H
+
+#ifndef METAXXA_CONTAINS_H
+#define METAXXA_CONTAINS_H
+
+
+
+namespace metaxxa
+{
+    template
+    <
+        typename TupleT,
+        typename... Types
+    >
+    constexpr bool contains_all();
+
+    namespace detail
     {
-        return detail::apply
-        (
-            std::forward<Function>(function), 
-            std::forward<Tuple>(tuple), 
-            std::make_index_sequence<std::tuple_size_v<std::decay_t<Tuple>>>()
-        );
+        template
+        <
+            typename TupleT,
+            typename Type,
+            std::size_t... INDICES
+        >
+        constexpr bool contains(std::index_sequence<INDICES...>)
+        {
+            return (false || ... || std::is_same_v<std::tuple_element_t<INDICES, TupleT>, Type>);
+        }
+
+        template
+        <
+            typename TupleT,
+            typename RequestedTuple,
+            std::size_t... INDICES
+        >
+        constexpr bool contains_packed(std::index_sequence<INDICES...>)
+        {
+            return contains_all<TupleT, std::tuple_element_t<INDICES, RequestedTuple>...>();
+        }
+    }
+
+    template
+    <
+        typename TupleT,
+        typename Type
+    >
+    constexpr bool contains()
+    {
+        using Tuple = MoveParameters<TypeTuple, TupleT>;        
+
+        return detail::contains<Tuple, Type>(std::make_index_sequence<std::tuple_size_v<Tuple>>());
+    }
+
+    template
+    <
+        typename TupleT,
+        typename... Types
+    >
+    constexpr bool contains_all()
+    {
+        using Tuple = MoveParameters<TypeTuple, TupleT>;
+
+        return (true && ... && contains<Tuple, Types>());
+    }
+
+    template
+    <
+        typename TupleT,
+        typename RequestedTuple
+    >
+    constexpr bool contains_packed()
+    {
+        using Tuple = MoveParameters<TypeTuple, TupleT>;
+        using Requested = MoveParameters<TypeTuple, RequestedTuple>;
+
+        return detail::contains_packed<Tuple, Requested>(std::make_index_sequence<std::tuple_size_v<Requested>>());
+    }
+
+    template <typename TupleT, typename T>
+    using Contains = typename If<contains<TupleT, T>()>
+        ::template Then<std::true_type>
+        ::template Else<std::false_type>
+        ::Type;
+
+    template <typename TupleT, typename... Ts>
+    using ContainsAll = typename If<contains_all<TupleT, Ts...>()>
+        ::template Then<std::true_type>
+        ::template Else<std::false_type>
+        ::Type;
+
+    template <typename TupleT, typename RequestedTupleT>
+    using ContainsPacked = typename If<contains_packed<TupleT, RequestedTupleT>()>
+        ::template Then<std::true_type>
+        ::template Else<std::false_type>
+        ::Type;
+}
+
+#endif // METAXXA_CONTAINS_H
+
+#ifndef METAXXA_UNIQUE_H
+#define METAXXA_UNIQUE_H
+
+
+namespace metaxxa
+{
+    namespace detail
+    {
+        template 
+        <
+            template <typename...> typename ResultTemplate, 
+            typename ResultTuple, 
+            typename T, 
+            typename... Rest
+        >
+        class Unique
+        {
+            static constexpr bool CONTAINS = metaxxa::contains<ResultTuple, T>();
+
+            using NextUnique = typename If<CONTAINS>
+                ::template Then
+                <
+                    Unique<ResultTemplate, ResultTuple, Rest...>
+                >
+                ::template Else
+                <
+                    Unique
+                    <
+                        ResultTemplate, 
+                        typename ResultTuple::template Concat<TypeTuple<T>>, 
+                        Rest...
+                    >
+                >
+                ::Type;
+        public:
+            using Type = typename NextUnique::Type;
+
+            using CheckType = typename If<CONTAINS>
+                ::template Then<std::false_type>
+                ::template Else<typename NextUnique::CheckType>
+                ::Type;
+        };
+
+        template 
+        <
+            template <typename...> typename ResultTemplate,
+            typename ResultTuple, 
+            typename T
+        >
+        class Unique<ResultTemplate, ResultTuple, T>
+        {
+            static constexpr bool CONTAINS = metaxxa::contains<ResultTuple, T>();
+
+            using FinalTuple = typename If<CONTAINS>
+                ::template Then<ResultTuple>
+                ::template Else<typename ResultTuple::template Concat<TypeTuple<T>>>
+                ::Type;
+
+        public:
+            using Type = MoveParameters<ResultTemplate, FinalTuple>;
+
+            using CheckType = typename If<CONTAINS>
+                ::template Then<std::false_type>
+                ::template Else<std::true_type>
+                ::Type;
+        };
+
+        template 
+        <
+            template <typename...> typename ResultTemplate,
+            typename... Types
+        >
+        struct AvoidEmpty
+        {
+            using Type = typename Unique<ResultTemplate, TypeTuple<>, Types...>::Type;
+
+            using CheckType = typename Unique<ResultTemplate, TypeTuple<>, Types...>::CheckType;
+        };
+
+        template <template <typename...> typename ResultTemplate>
+        struct AvoidEmpty<ResultTemplate>
+        {
+            using Type = ResultTemplate<>;
+
+            using CheckType = std::true_type;
+        };
+
+        template <template <typename...> typename ResultTemplate>
+        struct UniqueGate
+        {
+            template <typename... Types>
+            struct Type
+            {
+                using Result = typename AvoidEmpty<ResultTemplate, Types...>::Type;
+            };
+
+            template <typename... Types>
+            using CheckType = typename AvoidEmpty<ResultTemplate, Types...>::CheckType;
+        };
+    }
+
+    template
+    <
+        template <typename...> typename ResultTemplate,
+        typename TupleT
+    >
+    using Unique = typename MoveParameters
+    <
+        detail::UniqueGate<ResultTemplate>::template Type,
+        TupleT
+    >::Result;
+
+    template <typename TupleT>
+    using IsUnique = MoveParameters
+    <
+        detail::UniqueGate<TypeTuple>::template CheckType,
+        TupleT
+    >;
+
+    template <typename TupleT>
+    constexpr bool is_unique()
+    {
+        return IsUnique<TupleT>::value;
     }
 }
 
-#endif // METAXXA_ALGORITHM_APPLY_INC
-
+#endif // METAXXA_UNIQUE_H
 
 #ifndef METAXXA_ALGORITHM_INVOKEFUNCTIONS_INC
 #define METAXXA_ALGORITHM_INVOKEFUNCTIONS_INC
@@ -1529,13 +1718,13 @@ namespace metaxxa
         template <typename T>
         struct IsTrue
         {
-            static constexpr bool value() { return T::value(); }
+            static constexpr bool value = T::value;
         };
 
         template <bool RESULT, typename CaseType>
         struct CasePair
         {
-            static constexpr bool value() { return RESULT; }
+            static constexpr bool value = RESULT;
 
             using Type = CaseType;            
         };
@@ -1742,218 +1931,64 @@ namespace metaxxa
 
 #endif // METAXXA_ENABLEFNIF_H
 
-
-#ifndef METAXXA_TUPLE_INC
-#define METAXXA_TUPLE_INC
+#ifndef METAXXA_ISINSTANTIATIONOF_H
+#define METAXXA_ISINSTANTIATIONOF_H
 
 
 namespace metaxxa
 {
     namespace detail
     {
-        template <typename... Args>
-        constexpr std::size_t memory_size()
-        {
-            return (0 + ... + sizeof(Args));
-        }
+        template 
+        <
+            template <typename...> typename TemplateType, 
+            template <typename...> typename SrcType, 
+            typename... Types
+        >
+        constexpr auto is_instatiation_of(SrcType<Types...> &&)
+            -> std::bool_constant<std::is_same_v<TemplateType<Types...>, SrcType<Types...>>>;
 
-        template <template <typename...> typename Tuple, typename... Args>
-        constexpr std::size_t memory_size(Tuple<Args...> &&)
-        {
-            return memory_size<Args...>();
-        }
+        template 
+        <
+            template <typename...> typename TemplateType,
+            typename SrcType,
+            typename... Types
+        >
+        constexpr auto is_instatiation_of(SrcType &&)
+            -> std::false_type;
     }
 
-    template <typename... Args>
-    Tuple<Args...>::Tuple()
-    : data(static_cast<unsigned char *>(malloc(detail::memory_size<Args...>())))
+    template <typename T, template <typename...> typename TemplateType>
+    constexpr bool is_instatiation_of()
     {
-        construct(std::make_index_sequence<TypeTuple::size()>());
-    }
-
-    template <typename... Args>
-    Tuple<Args...>::Tuple(Args&&... args)
-    : data(static_cast<unsigned char *>(malloc(detail::memory_size<Args...>())))
-    {
-        construct(std::forward<Args>(args)..., std::make_index_sequence<TypeTuple::size()>());
-    }
-
-    template <typename... Args>
-    Tuple<Args...>::Tuple(const Args&... args)
-    : data(static_cast<unsigned char *>(malloc(detail::memory_size<Args...>())))
-    {
-        construct(args..., std::make_index_sequence<TypeTuple::size()>());
-    }
-
-    template <typename... Args>
-    template <typename TupleT>
-    Tuple<Args...>::Tuple(const TupleT &other)
-    : data(static_cast<unsigned char *>(malloc(detail::memory_size<Args...>())))
-    {
-        construct(other, std::make_index_sequence<std::tuple_size_v<TupleT>>());
-    }
-
-    template <typename... Args>
-    Tuple<Args...>::Tuple(const Tuple &other)
-    : data(static_cast<unsigned char *>(malloc(detail::memory_size<Args...>())))
-    {
-        construct(other, std::make_index_sequence<TypeTuple::size()>());
-    }
-
-    template <typename... Args>
-    Tuple<Args...>::Tuple(Tuple &&other)
-    : data(other.data)
-    {
-        other.data = nullptr;
-        for(auto i = 0u; i < sizeof...(Args); ++i)
-            offsets[i] = other.offsets[i];
-    }
-
-    template <typename... Args>
-    Tuple<Args...>::~Tuple()
-    {
-        deallocate(MakeReverseIndexRange<TypeTuple::size(), 0>());
-    }
-
-    template <typename... Args>
-    template <typename TupleT>
-    Tuple<Args...> &Tuple<Args...>::operator=(const TupleT &rhs)
-    {
-        return *this = std::move(Tuple(rhs));
-    }
-
-    template <typename... Args>
-    Tuple<Args...> &Tuple<Args...>::operator=(const Tuple &rhs)
-    {
-        if(this != &rhs)
-            *this = std::move(Tuple(rhs));
-
-        return *this;
-    }
-
-    template <typename... Args>
-    Tuple<Args...> &Tuple<Args...>::operator=(Tuple &&rhs)
-    {
-        data = rhs.data;
-        rhs.data = nullptr;
-        return *this;
-    }
-
-    template <typename... Args>
-    metaxxa_inline void *Tuple<Args...>::get(std::size_t index)
-    {
-        return static_cast<void *>(data + offsets[index]);
-    }
-
-    template <typename... Args>
-    metaxxa_inline const void *Tuple<Args...>::get(std::size_t index) const
-    {
-        return const_cast<Tuple<Args...>*>(this)->get(index);
-    }
-
-    template <typename... Args>
-    template <typename T>
-    metaxxa_inline auto &Tuple<Args...>::get(std::size_t index)
-    {
-        return *static_cast<T*>(get(index));
-    }
-
-    template <typename... Args>
-    template <typename T>
-    metaxxa_inline const auto &Tuple<Args...>::get(std::size_t index) const
-    {
-        return const_cast<Tuple<Args...>*>(this)->template get<T>(index);
-    }
-
-    template <typename... Args>
-    template <std::size_t INDEX>
-    metaxxa_inline auto &Tuple<Args...>::get()
-    {
-        return get<typename TypeTuple::template Get<INDEX>>(INDEX);
-    }
-
-    template <typename... Args>
-    template <std::size_t INDEX>
-    metaxxa_inline const auto &Tuple<Args...>::get() const
-    {
-        return const_cast<Tuple<Args...>*>(this)->template get<INDEX>();
-    }
-
-    template <typename... Args>
-    template <std::size_t... INDICES>
-    metaxxa_inline void Tuple<Args...>::construct(std::index_sequence<INDICES...>)
-    {
-        ((void)(offsets[INDICES] = detail::memory_size(TakeFirst<TypeList, TypeTuple, INDICES>())), ...);
-
-        if(data)
-            ((void)(new (get(INDICES)) typename TypeTuple::template Get<INDICES>()), ...);
-    }
-
-    template <typename... Args>
-    template <std::size_t... INDICES>
-    metaxxa_inline void Tuple<Args...>::construct(Args&&... args, std::index_sequence<INDICES...>)
-    {
-        ((void)(offsets[INDICES] = detail::memory_size(TakeFirst<TypeList, TypeTuple, INDICES>())), ...);
-
-        if(data)
-            ((void)(new (get(INDICES)) typename TypeTuple::template Get<INDICES>(std::forward<Args>(args))), ...);
-    }
-
-    template <typename... Args>
-    template <std::size_t... INDICES>
-    metaxxa_inline void Tuple<Args...>::construct(const Args&... args, std::index_sequence<INDICES...>)
-    {
-        ((void)(offsets[INDICES] = detail::memory_size(TakeFirst<TypeList, TypeTuple, INDICES>())), ...);
-
-        if(data)
-            ((void)(new (get(INDICES)) typename TypeTuple::template Get<INDICES>(args)), ...);
-    }
-
-    template <typename... Args>
-    template <typename OtherTuple, std::size_t... INDICES>
-    metaxxa_inline void Tuple<Args...>::construct(const OtherTuple &other, std::index_sequence<INDICES...>)
-    {
-        ((void)(offsets[INDICES] = detail::memory_size(TakeFirst<TypeList, TypeTuple, INDICES>())), ...);
-
-        if(data)
-            ((void)(new (get(INDICES)) typename TypeTuple::template Get<INDICES>(std::get<INDICES>(other))), ...);
-    }
-
-    template <typename... Args>
-    template <std::size_t... INDICES>
-    metaxxa_inline void Tuple<Args...>::deallocate(std::index_sequence<INDICES...>)
-    {
-        if(data)
-        {
-            (deallocate<INDICES, typename TypeTuple::template Get<INDICES>>(), ...);
-            ::free(data);
-        }
-    }
-
-    template <typename... Args>
-    template <std::size_t INDEX, typename T>
-    metaxxa_inline void Tuple<Args...>::deallocate()
-    {
-        get<INDEX>().~T();
+        return decltype(detail::is_instatiation_of<TemplateType>(std::declval<T>()))::value;
     }
 }
 
-namespace std
+#endif // METAXXA_ISINSTANTIATIONOF_H
+
+#ifndef METAXXA_ISARRAYOF_H
+#define METAXXA_ISARRAYOF_H
+
+
+namespace metaxxa
 {
-    template <std::size_t INDEX, typename... Args>
-    auto &get(metaxxa::Tuple<Args...> &tuple)
+    template <typename T, typename Of>
+    constexpr bool is_array_of()
     {
-        return tuple.template get<INDEX>();
-    }
+        using TNCV = std::remove_cv_t<std::remove_reference_t<T>>;
+        using OfNCV = std::remove_cv_t<std::remove_reference_t<Of>>;
 
-    template <std::size_t INDEX, typename... Args>
-    auto &get(const metaxxa::Tuple<Args...> &tuple)
-    {
-        return tuple.template get<INDEX>();
-    }
+        return std::is_array_v<TNCV> 
+        && std::is_same_v
+        <
+            TNCV, 
+            OfNCV[std::extent_v<TNCV>]
+        >;
+    }    
 }
 
-#endif // METAXXA_TUPLE_INC
+#endif // METAXXA_ISARRAYOF_H
 
 
 #endif // METAXXA_HPP
@@ -2708,6 +2743,18 @@ namespace mafox
 
         std::size_t upper_bandwidth() const;
 
+        pointer diagonal_data();
+
+        const_pointer diagonal_cdata() const;
+
+        pointer lower_diagonal_data(std::size_t level);
+
+        const_pointer lower_diagonal_cdata(std::size_t level) const;
+
+        pointer upper_diagonal_data(std::size_t level);
+
+        const_pointer upper_diagonal_cdata(std::size_t level) const;
+
     private:
         virtual reference element(std::size_t i, std::size_t j) override;
 
@@ -2814,7 +2861,9 @@ namespace mafox
     template <typename T>
     BandMatrix<T>::BandMatrix(std::size_t size, std::size_t lower_bandwidth, std::size_t upper_bandwidth)
     : m_data(band_matrix_data_t<T>::make(size, lower_bandwidth, upper_bandwidth))
-    {}
+    {
+        assert(lower_bandwidth < size && upper_bandwidth < size);
+    }
 
     template <typename T>
     BandMatrix<T>::BandMatrix(const BandMatrix &other)
@@ -2999,6 +3048,46 @@ namespace mafox
     {
         return m_data->u;
     }
+
+    template <typename T>
+    typename BandMatrix<T>::pointer BandMatrix<T>::diagonal_data()
+    {
+        return m_data->arrays[m_data->l].get();
+    }
+
+    template <typename T>
+    typename BandMatrix<T>::const_pointer BandMatrix<T>::diagonal_cdata() const
+    {
+        return const_cast<BandMatrix<T>*>(this)->diagonal_data();
+    }
+
+    template <typename T>
+    typename BandMatrix<T>::pointer BandMatrix<T>::lower_diagonal_data(std::size_t level)
+    {
+        assert(level < lower_bandwidth());
+
+        return m_data->arrays[m_data->l - (level + 1)].get();
+    }
+
+    template <typename T>
+    typename BandMatrix<T>::const_pointer BandMatrix<T>::lower_diagonal_cdata(std::size_t level) const
+    {
+        return const_cast<BandMatrix<T>*>(this)->lower_diagonal_data(level);
+    }
+
+    template <typename T>
+    typename BandMatrix<T>::pointer BandMatrix<T>::upper_diagonal_data(std::size_t level)
+    {
+        assert(level < upper_bandwidth());
+
+        return m_data->arrays[m_data->l + level + 1].get();
+    }
+
+    template <typename T>
+    typename BandMatrix<T>::const_pointer BandMatrix<T>::upper_diagonal_cdata(std::size_t level) const
+    {
+        return const_cast<BandMatrix<T>*>(this)->upper_diagonal_data(level);
+    }
 }
 
 #endif // MAFOX_BANDMATRIX_INC
@@ -3025,11 +3114,19 @@ namespace mafox
 
         TridiagonalMatrix(TridiagonalMatrix &&) = default;
 
-        virtual ~TridiagonalMatrix();
+        virtual ~TridiagonalMatrix() = default;
 
         TridiagonalMatrix &operator=(const TridiagonalMatrix &) = default;
 
         TridiagonalMatrix &operator=(TridiagonalMatrix &&) = default;
+
+        pointer lower_diagonal_data();
+
+        const_pointer lower_diagonal_cdata() const;
+
+        pointer upper_diagonal_data();
+
+        const_pointer upper_diagonal_cdata() const;
     };
 
     template <typename T>
@@ -3047,9 +3144,427 @@ namespace mafox
     TridiagonalMatrix<T>::TridiagonalMatrix(std::size_t size)
     : BandMatrix<T>(size, 1, 1)
     {}
+
+    template <typename T>
+    typename TridiagonalMatrix<T>::pointer TridiagonalMatrix<T>::lower_diagonal_data()
+    {
+        return BandMatrix<T>::lower_diagonal_data(0);
+    }
+
+    template <typename T>
+    typename TridiagonalMatrix<T>::const_pointer TridiagonalMatrix<T>::lower_diagonal_cdata() const
+    {
+        return BandMatrix<T>::lower_diagonal_cdata(0);
+    }
+
+    template <typename T>
+    typename TridiagonalMatrix<T>::pointer TridiagonalMatrix<T>::upper_diagonal_data()
+    {
+        return BandMatrix<T>::upper_diagonal_data(0);
+    }
+
+    template <typename T>
+    typename TridiagonalMatrix<T>::const_pointer TridiagonalMatrix<T>::upper_diagonal_cdata() const
+    {
+        return BandMatrix<T>::upper_diagonal_cdata(0);
+    }
 }
 
 #endif // MAFOX_TRIDIAGONALMATRIX_INC
+
+
+#ifndef MAFOX_FDMMATRIX_INC
+#define MAFOX_FDMMATRIX_INC
+
+
+#ifndef MAFOX_FDMMATRIX_H
+#define MAFOX_FDMMATRIX_H
+
+
+
+namespace mafox
+{
+    namespace detail
+    {
+        enum class FDMCoeff
+        {
+            A, B, C
+        };
+
+        template <FDMCoeff COEFF, typename Callable>
+        struct FDMCoeffGenerator
+        {
+            static constexpr FDMCoeff COEFFICIENT = COEFF;
+
+            FDMCoeffGenerator(const Callable &callable);
+
+            template <typename... Args>
+            auto operator()(const Args &... args);
+
+            template <typename... Args>
+            auto operator()(const Args &... args) const;
+
+            Callable generate;
+        };
+
+        template <typename T, typename... Generators>
+        class FDMMatrixBuilder;
+
+        template <bool HAS_A, typename T, typename... Generators>
+        class FDMMatrixBuilderACoeff
+        {
+            using SelfType = FDMMatrixBuilder<T, Generators...>;
+        public:
+            template <typename Callable>
+            auto a_coeff(const Callable &)
+                -> FDMMatrixBuilder<T, Generators..., FDMCoeffGenerator<FDMCoeff::A, Callable>>;
+        };
+
+        template <typename T, typename... Generators>
+        class FDMMatrixBuilderACoeff<true, T, Generators...>
+        {};
+
+        template <bool HAS_B, typename T, typename... Generators>
+        class FDMMatrixBuilderBCoeff
+        {
+            using SelfType = FDMMatrixBuilder<T, Generators...>;
+        public:
+            template <typename Callable>
+            auto b_coeff(const Callable &)
+                -> FDMMatrixBuilder<T, Generators..., FDMCoeffGenerator<FDMCoeff::B, Callable>>;
+        };
+
+        template <typename T, typename... Generators>
+        class FDMMatrixBuilderBCoeff<true, T, Generators...>
+        {};
+
+        template <bool HAS_C, typename T, typename... Generators>
+        class FDMMatrixBuilderCCoeff
+        {
+            using SelfType = FDMMatrixBuilder<T, Generators...>;
+        public:
+            template <typename Callable>
+            auto c_coeff(const Callable &)
+                -> FDMMatrixBuilder<T, Generators..., FDMCoeffGenerator<FDMCoeff::C, Callable>>;
+        };
+
+        template <typename T, typename... Generators>
+        class FDMMatrixBuilderCCoeff<true, T, Generators...>
+        {};
+
+        template <bool IS_COMPLETED, typename Builder>
+        class FDMMatrixBuilderComputeMethod
+        {
+        public:
+            auto compute();
+        };
+
+        template <typename Builder>
+        class FDMMatrixBuilderComputeMethod<false, Builder>
+        {};
+
+        template <FDMCoeff COEFF, typename... Generators>
+        constexpr bool has_coeff()
+        {
+            return (false || ... || (Generators::COEFFICIENT == COEFF));
+        }
+
+        template <typename... Generators>
+        constexpr bool is_completed()
+        {
+            return has_coeff<FDMCoeff::A, Generators...>()
+                && has_coeff<FDMCoeff::B, Generators...>()
+                && has_coeff<FDMCoeff::C, Generators...>();
+        }
+
+        template <typename T, typename... Generators>
+        class FDMMatrixBuilder :
+            public FDMMatrixBuilderACoeff<has_coeff<FDMCoeff::A, Generators...>(), T, Generators...>,
+            public FDMMatrixBuilderBCoeff<has_coeff<FDMCoeff::B, Generators...>(), T, Generators...>,
+            public FDMMatrixBuilderCCoeff<has_coeff<FDMCoeff::C, Generators...>(), T, Generators...>,
+            public FDMMatrixBuilderComputeMethod<is_completed<Generators...>(), FDMMatrixBuilder<T, Generators...>>
+        {
+        public:
+            using value_type = T;
+
+            FDMMatrixBuilder(const T &begin, const T &end, const T &step, std::tuple<Generators...> &&generators)
+            : begin(begin), end(end), step(step), generators(std::forward<std::tuple<Generators...>>(generators))
+            {}
+
+        private:
+            friend class FDMMatrixBuilderACoeff<has_coeff<FDMCoeff::A, Generators...>(), T, Generators...>;
+            friend class FDMMatrixBuilderBCoeff<has_coeff<FDMCoeff::B, Generators...>(), T, Generators...>;
+            friend class FDMMatrixBuilderCCoeff<has_coeff<FDMCoeff::C, Generators...>(), T, Generators...>;
+            friend class FDMMatrixBuilderComputeMethod<is_completed<Generators...>(), FDMMatrixBuilder<T, Generators...>>;
+
+            T begin, end, step;
+            std::tuple<Generators...> generators;
+        };
+    }
+
+    template <typename T>
+    class FDMMatrixBorders
+    {
+    public:
+        FDMMatrixBorders(const T &begin, const T &end, const T &step)
+        : begin(begin), end(end), step(step)
+        {}
+
+        FDMMatrixBorders(const FDMMatrixBorders &) = default;
+
+        FDMMatrixBorders(FDMMatrixBorders &&) = default;
+
+        ~FDMMatrixBorders() = default;
+
+        FDMMatrixBorders &operator=(const FDMMatrixBorders &) = default;
+
+        FDMMatrixBorders &operator=(FDMMatrixBorders &&) = default;
+
+        template <typename Callable>
+        auto a_coeff(const Callable &) const
+            -> detail::FDMMatrixBuilder
+            <
+                T,
+                detail::FDMCoeffGenerator<detail::FDMCoeff::A, Callable>
+            >;
+
+        template <typename Callable>
+        auto b_coeff(const Callable &) const
+            -> detail::FDMMatrixBuilder
+            <
+                T,
+                detail::FDMCoeffGenerator<detail::FDMCoeff::B, Callable>
+            >;
+
+        template <typename Callable>
+        auto c_coeff(const Callable &) const
+            -> detail::FDMMatrixBuilder
+            <
+                T,
+                detail::FDMCoeffGenerator<detail::FDMCoeff::C, Callable>
+            >;
+
+    private:
+        T begin, end, step;
+    };
+
+
+    template <typename T>
+    FDMMatrixBorders<T> fdm_matrix(const T &start, const T &end, const T &step);
+}
+
+#endif // MAFOX_FDMMATRIX_H
+
+namespace mafox
+{
+    namespace detail
+    {
+        template <FDMCoeff COEFF>
+        struct IsCoeff
+        {
+            template <typename T>
+            struct Checker
+            {
+                static constexpr bool value = (T::COEFFICIENT == COEFF);
+            };
+        };
+
+        template <FDMCoeff COEFF, typename Callable>
+        FDMCoeffGenerator<COEFF, Callable>::FDMCoeffGenerator(const Callable &callable)
+        : generate(callable)
+        {}
+
+        template <FDMCoeff COEFF, typename Callable>
+        template <typename... Args>
+        auto FDMCoeffGenerator<COEFF, Callable>::operator()(const Args &... args)
+        {
+            return generate(args...);
+        }
+
+        template <FDMCoeff COEFF, typename Callable>
+        template <typename... Args>
+        auto FDMCoeffGenerator<COEFF, Callable>::operator()(const Args &... args) const
+        {
+            return generate(args...);
+        }
+
+        template <bool HAS_A, typename T, typename... Generators>
+        template <typename Callable>
+        auto FDMMatrixBuilderACoeff<HAS_A, T, Generators...>::a_coeff(const Callable &generator)
+            -> FDMMatrixBuilder<T, Generators..., FDMCoeffGenerator<FDMCoeff::A, Callable>>
+        {
+            auto *self = reinterpret_cast<SelfType *>(this);
+
+            return FDMMatrixBuilder<T, Generators..., FDMCoeffGenerator<FDMCoeff::A, Callable>>
+            (
+                self->begin,
+                self->end,
+                self->step,
+                std::tuple_cat
+                (
+                    self->generators, 
+                    std::make_tuple(FDMCoeffGenerator<FDMCoeff::A, Callable>(generator))
+                )
+            );
+        }
+
+        template <bool HAS_B, typename T, typename... Generators>
+        template <typename Callable>
+        auto FDMMatrixBuilderBCoeff<HAS_B, T, Generators...>::b_coeff(const Callable &generator)
+            -> FDMMatrixBuilder<T, Generators..., FDMCoeffGenerator<FDMCoeff::B, Callable>>
+        {
+            auto *self = reinterpret_cast<SelfType *>(this);
+
+            return FDMMatrixBuilder<T, Generators..., FDMCoeffGenerator<FDMCoeff::B, Callable>>
+            (
+                self->begin,
+                self->end,
+                self->step,
+                std::tuple_cat
+                (
+                    self->generators, 
+                    std::make_tuple(FDMCoeffGenerator<FDMCoeff::B, Callable>(generator))
+                )
+            );
+        }
+
+        template <bool HAS_C, typename T, typename... Generators>
+        template <typename Callable>
+        auto FDMMatrixBuilderCCoeff<HAS_C, T, Generators...>::c_coeff(const Callable &generator)
+            -> FDMMatrixBuilder<T, Generators..., FDMCoeffGenerator<FDMCoeff::C, Callable>>
+        {
+            auto *self = reinterpret_cast<SelfType *>(this);
+
+            return FDMMatrixBuilder<T, Generators..., FDMCoeffGenerator<FDMCoeff::C, Callable>>
+            (
+                self->begin,
+                self->end,
+                self->step,
+                std::tuple_cat
+                (
+                    self->generators, 
+                    std::make_tuple(FDMCoeffGenerator<FDMCoeff::C, Callable>(generator))
+                )
+            );
+        }
+
+        template <bool IS_COMPLETED, typename Builder>
+        auto FDMMatrixBuilderComputeMethod<IS_COMPLETED, Builder>::compute()
+        {
+            auto *self = static_cast<Builder*>(this);
+
+            using Generators = decltype(self->generators);
+            using T = typename Builder::value_type;
+            using FindA = metaxxa::Find<Generators, IsCoeff<FDMCoeff::A>::template Checker>;
+            using FindB = metaxxa::Find<Generators, IsCoeff<FDMCoeff::B>::template Checker>;
+            using FindC = metaxxa::Find<Generators, IsCoeff<FDMCoeff::C>::template Checker>;
+
+            constexpr std::size_t A_INDEX = FindA::INDEX;
+            constexpr std::size_t B_INDEX = FindB::INDEX;
+            constexpr std::size_t C_INDEX = FindC::INDEX;
+
+            auto &gen_a = std::get<A_INDEX>(self->generators);
+            auto &gen_b = std::get<B_INDEX>(self->generators);
+            auto &gen_c = std::get<C_INDEX>(self->generators);
+
+            using R = std::common_type_t
+            <
+                std::invoke_result_t<typename FindA::Type, T>,
+                std::invoke_result_t<typename FindB::Type, T>,
+                std::invoke_result_t<typename FindC::Type, T>
+            >;
+
+            std::size_t result_size = static_cast<std::size_t>((self->end - self->begin) / self->step);
+
+            if(result_size < 3)
+                MAFOX_FATAL("Unable to create a finite difference matrix with less than 3 cells");
+
+            TridiagonalMatrix<R> result(result_size);
+
+            T x = self->begin;
+            T h = self->step;
+
+            auto *main_diagonal = result.diagonal_data();
+            auto *upper_diagonal = result.upper_diagonal_data();
+            auto *lower_diagonal = result.lower_diagonal_data();
+
+            upper_diagonal[0] = gen_c(x);
+            main_diagonal[0] = gen_b(x);
+
+            x += h;
+            --result_size;
+
+            std::size_t i = 1;
+            for(; i < result_size; ++i, x += h)
+            {
+                upper_diagonal[i]   = gen_c(x);
+                main_diagonal[i]    = gen_b(x);
+                lower_diagonal[i-1] = gen_a(x);
+            }
+
+            main_diagonal[i]    = gen_b(x);
+            lower_diagonal[i-1] = gen_a(x);
+
+            return result;
+        }
+    }
+
+    template <typename T>
+    template <typename Callable>
+    auto FDMMatrixBorders<T>::a_coeff(const Callable &gen) const
+        -> detail::FDMMatrixBuilder
+            <
+                T,
+                detail::FDMCoeffGenerator<detail::FDMCoeff::A, Callable>
+            >
+    {
+        return detail::FDMMatrixBuilder
+        <
+            T,
+            detail::FDMCoeffGenerator<detail::FDMCoeff::A, Callable>
+        >(begin, end, step, std::make_tuple(detail::FDMCoeffGenerator<detail::FDMCoeff::A, Callable>(gen)));
+    }
+
+    template <typename T>
+    template <typename Callable>
+    auto FDMMatrixBorders<T>::b_coeff(const Callable &gen) const
+        -> detail::FDMMatrixBuilder
+            <
+                T,
+                detail::FDMCoeffGenerator<detail::FDMCoeff::B, Callable>
+            >
+    {
+        return detail::FDMMatrixBuilder
+        <
+            T,
+            detail::FDMCoeffGenerator<detail::FDMCoeff::B, Callable>
+        >(begin, end, step, std::make_tuple(detail::FDMCoeffGenerator<detail::FDMCoeff::B, Callable>(gen)));
+    }
+
+    template <typename T>
+    template <typename Callable>
+    auto FDMMatrixBorders<T>::c_coeff(const Callable &gen) const
+        -> detail::FDMMatrixBuilder
+            <
+                T,
+                detail::FDMCoeffGenerator<detail::FDMCoeff::C, Callable>
+            >
+    {
+        return detail::FDMMatrixBuilder
+        <
+            T,
+            detail::FDMCoeffGenerator<detail::FDMCoeff::C, Callable>
+        >(begin, end, step, std::make_tuple(detail::FDMCoeffGenerator<detail::FDMCoeff::C, Callable>(gen)));
+    }
+
+    template <typename T>
+    FDMMatrixBorders<T> fdm_matrix(const T &start, const T &end, const T &step)
+    {
+        return FDMMatrixBorders<T>(start, end, step);
+    }
+}
+
+#endif // MAFOX_FDMMATRIX_INC
 
 #endif // MAFOX_H
 
