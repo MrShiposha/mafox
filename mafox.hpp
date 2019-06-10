@@ -2035,7 +2035,7 @@ namespace mafox
 namespace mafox
 {
     template <typename T>
-    inline const static T ZERO(0);
+    inline const static T ZERO {};
 
     mafox_inline void zero_array(void *s, size_t n);
 }
@@ -3779,10 +3779,12 @@ namespace mafox
 
 namespace mafox
 {
-    struct UnknownVariable
-    {};
-
-    static inline constexpr UnknownVariable X; 
+    enum UnknownVariable
+    {
+        X = 0,
+        Y,
+        Z
+    };
 
     template <typename Matrix>
     auto operator*(const Matrix &, UnknownVariable)

@@ -8,10 +8,12 @@
 
 namespace mafox
 {
-    struct UnknownVariable
-    {};
-
-    static inline constexpr UnknownVariable X; 
+    enum UnknownVariable
+    {
+        X = 0,
+        Y,
+        Z
+    };
 
     template <typename Matrix>
     auto operator*(const Matrix &, UnknownVariable)
