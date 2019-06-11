@@ -58,8 +58,8 @@ namespace mafox
         std::unique_ptr<T[]> array; 
     };
 
-    template <typename T>
-    Matrix<T>::Matrix(std::size_t rows, std::size_t cols, MatrixOrder order)
+    template <typename T, typename MatrixHierarchyEnd>
+    Matrix<T, MatrixHierarchyEnd>::Matrix(std::size_t rows, std::size_t cols, MatrixOrder order)
     : m_data(matrix_data_t<T>::make(rows, cols, order))
     {
         std::size_t sz = rows * cols * sizeof(T);
@@ -67,47 +67,47 @@ namespace mafox
         zero_array(data(), sz);
     }
 
-    // template <typename T>
+    // template <typename T, typename MatrixHierarchyEnd>
     // template <typename Iterator>
-    // Matrix<T>::Matrix(Iterator begin, Iterator end)
+    // Matrix<T, MatrixHierarchyEnd>::Matrix(Iterator begin, Iterator end)
     // {}
 
-    // template <typename T>
-    // Matrix<T>::Matrix(std::initializer_list<std::initializer_list<T>> list)
+    // template <typename T, typename MatrixHierarchyEnd>
+    // Matrix<T, MatrixHierarchyEnd>::Matrix(std::initializer_list<std::initializer_list<T>> list)
     // {}
 
-    template <typename T>
-    Matrix<T>::Matrix(const Matrix &other)
+    template <typename T, typename MatrixHierarchyEnd>
+    Matrix<T, MatrixHierarchyEnd>::Matrix(const Matrix &other)
     : m_data(matrix_data_t<T>::make(other.rows(), other.cols(), other.order()))
     {
         memcpy(m_data->array.get(), other.m_data->array.get(), m_data->rows * m_data->cols * sizeof(T));
     }
 
-    template <typename T>
-    Matrix<T>::Matrix(Matrix &&other)
+    template <typename T, typename MatrixHierarchyEnd>
+    Matrix<T, MatrixHierarchyEnd>::Matrix(Matrix &&other)
     : m_data(matrix_data_t<T>::make(other.rows(), other.cols(), other.order(), std::move(other.m_data->array)))
     {}
 
-    template <typename T>
-    Matrix<T>::Matrix(shared_data_t m_data)
+    template <typename T, typename MatrixHierarchyEnd>
+    Matrix<T, MatrixHierarchyEnd>::Matrix(shared_data_t m_data)
     : m_data(m_data)
     {}
 
-    template <typename T>
-    Matrix<T>::~Matrix()
+    template <typename T, typename MatrixHierarchyEnd>
+    Matrix<T, MatrixHierarchyEnd>::~Matrix()
     {}
 
-    template <typename T>
-    Matrix<T> &Matrix<T>::operator=(const Matrix &rhs)
+    template <typename T, typename MatrixHierarchyEnd>
+    Matrix<T, MatrixHierarchyEnd> &Matrix<T, MatrixHierarchyEnd>::operator=(const Matrix &rhs)
     {
         if(this != &rhs)
-            *this = std::move(Matrix<T>(rhs));
+            *this = std::move(Matrix<T, MatrixHierarchyEnd>(rhs));
         
         return *this;
     }
 
-    template <typename T>
-    Matrix<T> &Matrix<T>::operator=(Matrix &&rhs)
+    template <typename T, typename MatrixHierarchyEnd>
+    Matrix<T, MatrixHierarchyEnd> &Matrix<T, MatrixHierarchyEnd>::operator=(Matrix &&rhs)
     {
         if(this != &rhs)
         {
@@ -120,20 +120,20 @@ namespace mafox
         return *this;
     }
 
-    template <typename T>
-    mafox_inline std::size_t Matrix<T>::rows() const
+    template <typename T, typename MatrixHierarchyEnd>
+    mafox_inline std::size_t Matrix<T, MatrixHierarchyEnd>::rows() const
     {
         return m_data->rows;
     }
 
-    template <typename T>
-    mafox_inline std::size_t Matrix<T>::cols() const
+    template <typename T, typename MatrixHierarchyEnd>
+    mafox_inline std::size_t Matrix<T, MatrixHierarchyEnd>::cols() const
     {
         return m_data->cols;
     }
 
-    template <typename T>
-    typename Matrix<T>::reference Matrix<T>::element(std::size_t i, std::size_t j)
+    template <typename T, typename MatrixHierarchyEnd>
+    typename Matrix<T, MatrixHierarchyEnd>::reference Matrix<T, MatrixHierarchyEnd>::element(std::size_t i, std::size_t j)
     {
         assert(i < rows() && j < cols());
 
@@ -145,20 +145,20 @@ namespace mafox
             MAFOX_FATAL("Unknown matrix order");
     }
 
-    template <typename T>
-    typename Matrix<T>::const_reference Matrix<T>::element(std::size_t i, std::size_t j) const
+    template <typename T, typename MatrixHierarchyEnd>
+    typename Matrix<T, MatrixHierarchyEnd>::const_reference Matrix<T, MatrixHierarchyEnd>::element(std::size_t i, std::size_t j) const
     {
-        return const_cast<Matrix<T>*>(this)->element(i, j);
+        return const_cast<Matrix<T, MatrixHierarchyEnd>*>(this)->element(i, j);
     }
 
-    template <typename T>
-    void Matrix<T>::set_element(std::size_t i, std::size_t j, const_reference value)
+    template <typename T, typename MatrixHierarchyEnd>
+    void Matrix<T, MatrixHierarchyEnd>::set_element(std::size_t i, std::size_t j, const_reference value)
     {
         element(i, j) = value;
     }
 
-    template <typename T>
-    void Matrix<T>::transpose()
+    template <typename T, typename MatrixHierarchyEnd>
+    void Matrix<T, MatrixHierarchyEnd>::transpose()
     {
         if(this->is_square())
         {
@@ -176,21 +176,21 @@ namespace mafox
             *this = std::move(transposed());
     }
 
-    template <typename T>
-    Matrix<T> Matrix<T>::transposed()
+    template <typename T, typename MatrixHierarchyEnd>
+    typename Matrix<T, MatrixHierarchyEnd>::template matrix_t<T> Matrix<T, MatrixHierarchyEnd>::transposed()
     {
         std::size_t r = rows(), c = cols();
-        Matrix<T> result(c, r);
+        Matrix<T, MatrixHierarchyEnd> result(c, r);
 
         for(std::size_t i = 0, j = 0; i < r; ++i)
             for(j = 0; j < c; ++j)
                 result.set_element(j, i, element(i, j));
 
-        return result;
+        return matrix_t<T>(std::move(result));
     }
 
-    template <typename T>
-    void Matrix<T>::transpose_rsd()
+    template <typename T, typename MatrixHierarchyEnd>
+    void Matrix<T, MatrixHierarchyEnd>::transpose_rsd()
     {
         if(this->is_square())
         {
@@ -207,74 +207,74 @@ namespace mafox
             *this = std::move(transposed_rsd());
     }
 
-    template <typename T>
-    Matrix<T> Matrix<T>::transposed_rsd()
+    template <typename T, typename MatrixHierarchyEnd>
+    typename Matrix<T, MatrixHierarchyEnd>::template matrix_t<T> Matrix<T, MatrixHierarchyEnd>::transposed_rsd()
     {
         std::size_t r = rows(), c = cols();
-        Matrix<T> result(c, r);
+        Matrix<T, MatrixHierarchyEnd> result(c, r);
 
         for(std::size_t i = 0, j = 0; i < r; ++i)
             for(j = 0; j < c; ++j)
                 result.set_element(c - j - 1, r - i - 1, element(i, j));
 
-        return result;
+        return matrix_t<T>(std::move(result));
     }
 
-    template <typename T>
-    typename Matrix<T>::shared_data_t Matrix<T>::shared_data()
+    template <typename T, typename MatrixHierarchyEnd>
+    typename Matrix<T, MatrixHierarchyEnd>::shared_data_t Matrix<T, MatrixHierarchyEnd>::shared_data()
     {
         return m_data;
     }
 
-    template <typename T>
-    typename Matrix<T>::const_shared_data_t Matrix<T>::shared_cdata() const
+    template <typename T, typename MatrixHierarchyEnd>
+    typename Matrix<T, MatrixHierarchyEnd>::const_shared_data_t Matrix<T, MatrixHierarchyEnd>::shared_cdata() const
     {
         return m_data;
     }
 
-    template <typename T>
-    Matrix<T> Matrix<T>::share()
+    template <typename T, typename MatrixHierarchyEnd>
+    typename Matrix<T, MatrixHierarchyEnd>::template matrix_t<T> Matrix<T, MatrixHierarchyEnd>::share()
     {
-        return Matrix<T>(m_data);
+        return matrix_t<T>(m_data);
     }
 
-    template <typename T>
-    std::shared_ptr<IMatrix<T>> Matrix<T>::share_interface()
+    template <typename T, typename MatrixHierarchyEnd>
+    std::shared_ptr<IMatrix<T>> Matrix<T, MatrixHierarchyEnd>::share_interface()
     {
-        return std::shared_ptr<Matrix<T>>(new Matrix<T>(m_data));
+        return std::shared_ptr<Matrix<T, MatrixHierarchyEnd>>(new Matrix<T, MatrixHierarchyEnd>(m_data));
     }
 
-    template <typename T>
-    std::shared_ptr<const IMatrix<T>> Matrix<T>::share_interface() const
+    template <typename T, typename MatrixHierarchyEnd>
+    std::shared_ptr<const IMatrix<T>> Matrix<T, MatrixHierarchyEnd>::share_interface() const
     {
-        return std::shared_ptr<Matrix<T>>(new Matrix<T>(m_data));
+        return std::shared_ptr<Matrix<T, MatrixHierarchyEnd>>(new Matrix<T, MatrixHierarchyEnd>(m_data));
     }
 
-    template <typename T>
-    typename Matrix<T>::pointer Matrix<T>::data()
-    {
-        return m_data->array.get();
-    }
-
-    template <typename T>
-    typename Matrix<T>::const_pointer Matrix<T>::cdata() const
+    template <typename T, typename MatrixHierarchyEnd>
+    typename Matrix<T, MatrixHierarchyEnd>::pointer Matrix<T, MatrixHierarchyEnd>::data()
     {
         return m_data->array.get();
     }
 
-    template <typename T>
-    MatrixOrder Matrix<T>::order() const
+    template <typename T, typename MatrixHierarchyEnd>
+    typename Matrix<T, MatrixHierarchyEnd>::const_pointer Matrix<T, MatrixHierarchyEnd>::cdata() const
+    {
+        return m_data->array.get();
+    }
+
+    template <typename T, typename MatrixHierarchyEnd>
+    MatrixOrder Matrix<T, MatrixHierarchyEnd>::order() const
     {
         return m_data->order;
     }
 
-    template <typename T>
-    void Matrix<T>::set_order(MatrixOrder order)
+    template <typename T, typename MatrixHierarchyEnd>
+    void Matrix<T, MatrixHierarchyEnd>::set_order(MatrixOrder order)
     {
         if(m_data->order != order)
         {
             std::size_t r = rows(), c = cols();
-            Matrix<T> reordered(r, c, order);
+            Matrix<T, MatrixHierarchyEnd> reordered(r, c, order);
             for(std::size_t i = 0, j = 0; i < r; ++i)
                 for(j = 0; j < c; ++j)
                     reordered.set_element(i, j, element(i, j));

@@ -4,7 +4,7 @@
 #include "def.h"
 #include "util.inc"
 #include "amatrix.inc"
-// #include "matrix.inc"
+#include "matrix.inc"
 #include "bandmatrix.inc"
 #include "tridiagonalmatrix.inc"
 

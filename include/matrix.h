@@ -11,17 +11,17 @@ namespace mafox
     template <typename T>
     class matrix_data_t;
 
-    template <typename T>
+    template <typename T, typename MatrixHierarchyEnd = This>
     class Matrix;
 
-    template <typename T>
-    struct MatrixTraits<Matrix<T>>
+    template <typename T, typename MatrixHierarchyEnd>
+    struct MatrixTraits<Matrix<T, MatrixHierarchyEnd>>
     {
         MAFOX_DEFAULT_MATRIX_TRAITS(Matrix, T, matrix_data_t<T>);
     };
 
-    template <typename T>
-    class Matrix : public AMatrix<Matrix<T>>
+    template <typename T, typename MatrixHierarchyEnd>
+    class Matrix : public MatrixExtender<AMatrix, Matrix<T>, MatrixHierarchyEnd>
     {
     public:
         USING_MAFOX_MATRIX_TYPES(Matrix);
@@ -55,17 +55,17 @@ namespace mafox
 
         virtual void transpose() override;
 
-        virtual Matrix<T> transposed() override;
+        virtual matrix_t<T> transposed() override;
 
         virtual void transpose_rsd() override;
 
-        virtual Matrix<T> transposed_rsd() override;
+        virtual matrix_t<T> transposed_rsd() override;
 
         virtual shared_data_t shared_data() override;
 
         virtual const_shared_data_t shared_cdata() const override;
 
-        virtual Matrix<T> share() override;
+        virtual matrix_t<T> share() override;
 
         virtual std::shared_ptr<IMatrix<T>> share_interface() override;
 
