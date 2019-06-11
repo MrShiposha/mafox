@@ -1,6 +1,8 @@
 #ifndef MAFOX_BANDMATRIX_INC
 #define MAFOX_BANDMATRIX_INC
 
+#include <cstring>
+
 #include "bandmatrix.h"
 #include "util.h"
 
