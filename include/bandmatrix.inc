@@ -134,12 +134,7 @@ namespace mafox
     BandMatrix<T, MatrixHierarchyEnd> &BandMatrix<T, MatrixHierarchyEnd>::operator=(BandMatrix &&rhs)
     {
         if(this != &rhs)
-        {
-            m_data->size   = rhs.m_data->size;
-            m_data->l      = rhs.m_data->l;
-            m_data->u      = rhs.m_data->u;
-            m_data->arrays = std::move(rhs.m_data->arrays);
-        }
+            m_data = std::move(rhs.m_data);
 
         return *this;
     }

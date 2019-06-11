@@ -110,12 +110,7 @@ namespace mafox
     Matrix<T, MatrixHierarchyEnd> &Matrix<T, MatrixHierarchyEnd>::operator=(Matrix &&rhs)
     {
         if(this != &rhs)
-        {
-            m_data->rows  = rhs.m_data->rows;
-            m_data->cols  = rhs.m_data->cols;
-            m_data->order = rhs.m_data->order;
-            m_data->array = std::move(rhs.m_data->array);
-        }
+            m_data = std::move(rhs.m_data);
         
         return *this;
     }

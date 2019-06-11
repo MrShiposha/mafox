@@ -51,6 +51,9 @@ namespace mafox
 
         virtual std::shared_ptr<const IMatrix> share_interface() const = 0;
     };
+
+    template <typename T>
+    constexpr bool is_matrix() { return std::is_base_of_v<MatrixTag, T>; }
 }
 
 #endif // MAFOX_IMATRIX_H

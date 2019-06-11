@@ -2115,6 +2115,9 @@ namespace mafox
 
         virtual std::shared_ptr<const IMatrix> share_interface() const = 0;
     };
+
+    template <typename T>
+    constexpr bool is_matrix() { return std::is_base_of_v<MatrixTag, T>; }
 }
 
 #endif // MAFOX_IMATRIX_H
@@ -2176,7 +2179,7 @@ namespace mafox
 
 #define MAFOX_BASEMATRIXTRAITS(this_t, value_t, base_t) mafox::MatrixTraits<base_t<value_t, this_t<value_t>>>
 
-#define MAFOX_INHERIT_TRAITS(this_t, value_t, base_t)                                                          \
+#define MAFOX_INHERIT_MATRIX_TRAITS(this_t, value_t, base_t)                                                          \
     template <typename ___MAFOX_T>                                                                             \
     using matrix_t            = this_t<___MAFOX_T>;                                                            \
     using data_t              = typename MAFOX_BASEMATRIXTRAITS(this_t, value_t, base_t)::data_t;              \
@@ -2557,12 +2560,7 @@ namespace mafox
     Matrix<T, MatrixHierarchyEnd> &Matrix<T, MatrixHierarchyEnd>::operator=(Matrix &&rhs)
     {
         if(this != &rhs)
-        {
-            m_data->rows  = rhs.m_data->rows;
-            m_data->cols  = rhs.m_data->cols;
-            m_data->order = rhs.m_data->order;
-            m_data->array = std::move(rhs.m_data->array);
-        }
+            m_data = std::move(rhs.m_data);
         
         return *this;
     }
@@ -2966,12 +2964,7 @@ namespace mafox
     BandMatrix<T, MatrixHierarchyEnd> &BandMatrix<T, MatrixHierarchyEnd>::operator=(BandMatrix &&rhs)
     {
         if(this != &rhs)
-        {
-            m_data->size   = rhs.m_data->size;
-            m_data->l      = rhs.m_data->l;
-            m_data->u      = rhs.m_data->u;
-            m_data->arrays = std::move(rhs.m_data->arrays);
-        }
+            m_data = std::move(rhs.m_data);
 
         return *this;
     }
@@ -3209,7 +3202,7 @@ namespace mafox
     template <typename T, typename MatrixHierarchyEnd>
     struct MatrixTraits<TridiagonalMatrix<T, MatrixHierarchyEnd>>
     {
-        MAFOX_INHERIT_TRAITS(TridiagonalMatrix, T, BandMatrix);
+        MAFOX_INHERIT_MATRIX_TRAITS(TridiagonalMatrix, T, BandMatrix);
     };
 }
 
@@ -3259,8 +3252,436 @@ namespace mafox
 
 #endif // MAFOX_TRIDIAGONALMATRIX_INC
 
-// #include "avector.h"
-// #include "vector.h"
+
+#ifndef MAFOX_AVECTOR_INC
+#define MAFOX_AVECTOR_INC
+
+
+#ifndef MAFOX_AVECTOR_H
+#define MAFOX_AVECTOR_H
+
+
+#define USING_MAFOX_VECTOR_TYPES(MatrixHierarchyEnd)                                                       \
+    template <typename ___MAFOX_T>                                                                         \
+    using matrix_t            = typename MAFOX_AMATRIX(MatrixHierarchyEnd)::template matrix_t<___MAFOX_T>; \
+    template <typename ___MAFOX_T>                                                                         \
+    using vector_t            = matrix_t<___MAFOX_T>;                                                      \
+    using data_t              = typename MAFOX_AMATRIX(MatrixHierarchyEnd)::data_t;                        \
+    using shared_data_t       = typename MAFOX_AMATRIX(MatrixHierarchyEnd)::shared_data_t;                 \
+    using const_shared_data_t = typename MAFOX_AMATRIX(MatrixHierarchyEnd)::const_shared_data_t;           \
+    using difference_type_t   = typename MAFOX_AMATRIX(MatrixHierarchyEnd)::difference_type;               \
+    using value_type          = typename MAFOX_AMATRIX(MatrixHierarchyEnd)::value_type;                    \
+    using pointer             = typename MAFOX_AMATRIX(MatrixHierarchyEnd)::pointer;                       \
+    using const_pointer       = typename MAFOX_AMATRIX(MatrixHierarchyEnd)::const_pointer;                 \
+    using reference           = typename MAFOX_AMATRIX(MatrixHierarchyEnd)::reference;                     \
+    using const_reference     = typename MAFOX_AMATRIX(MatrixHierarchyEnd)::const_reference;               \
+    using Size                = typename MAFOX_AMATRIX(MatrixHierarchyEnd)::Size
+
+#define MAFOX_DEFAULT_VECTOR_TRAITS(user_matrix_t, value_t, user_data_t)   \
+    template <typename ___MAFOX_T>                                         \
+    using matrix_t            = user_matrix_t<___MAFOX_T>;                 \
+    template <typename ___MAFOX_T>                                         \
+    using vector_t            = matrix_t<___MAFOX_T>;                      \
+    using data_t              = user_data_t;                               \
+    using shared_data_t       = std::shared_ptr<data_t>;                   \
+    using const_shared_data_t = std::shared_ptr<const data_t>;             \
+    using difference_type     = std::ptrdiff_t;                            \
+    using value_type          = std::remove_cv_t<value_t>;                 \
+    using pointer             = value_t *;                                 \
+    using const_pointer       = const value_t *;                           \
+    using reference           = value_t &;                                 \
+    using const_reference     = const value_t &
+
+#define MAFOX_INHERIT_VECTOR_TRAITS(this_t, value_t, base_t)                                                   \
+    template <typename ___MAFOX_T>                                                                             \
+    using matrix_t            = this_t<___MAFOX_T>;                                                            \
+    template <typename ___MAFOX_T>                                                                             \
+    using vector_t            = matrix_t<___MAFOX_T>;                                                          \
+    using data_t              = typename MAFOX_BASEMATRIXTRAITS(this_t, value_t, base_t)::data_t;              \
+    using shared_data_t       = typename MAFOX_BASEMATRIXTRAITS(this_t, value_t, base_t)::shared_data_t;       \
+    using const_shared_data_t = typename MAFOX_BASEMATRIXTRAITS(this_t, value_t, base_t)::const_shared_data_t; \
+    using difference_type     = typename MAFOX_BASEMATRIXTRAITS(this_t, value_t, base_t)::difference_type;     \
+    using value_type          = typename MAFOX_BASEMATRIXTRAITS(this_t, value_t, base_t)::value_type;          \
+    using pointer             = typename MAFOX_BASEMATRIXTRAITS(this_t, value_t, base_t)::pointer;             \
+    using const_pointer       = typename MAFOX_BASEMATRIXTRAITS(this_t, value_t, base_t)::const_pointer;       \
+    using reference           = typename MAFOX_BASEMATRIXTRAITS(this_t, value_t, base_t)::reference;           \
+    using const_reference     = typename MAFOX_BASEMATRIXTRAITS(this_t, value_t, base_t)::const_reference
+
+namespace mafox
+{
+    struct VectorTag
+    {
+        virtual ~VectorTag() = default;
+    };
+
+    template <typename T, typename MatrixHierarchyEnd>
+    class AVector : 
+        public MatrixExtender<AMatrix, MatrixHierarchyEnd, MatrixHierarchyEnd>, 
+        public VectorTag
+    {
+    public:
+        USING_MAFOX_VECTOR_TYPES(MatrixHierarchyEnd);
+        using base_matrix_t = MatrixExtender<::mafox::AMatrix, MatrixHierarchyEnd, MatrixHierarchyEnd>;
+        
+    private:
+        // These methods are meaningless in vector
+        virtual std::size_t rows() const override;
+        virtual std::size_t cols() const override;
+        virtual reference element(std::size_t i, std::size_t j) override;
+        virtual const_reference element(std::size_t i, std::size_t j) const override;
+        virtual void set_element(std::size_t i, std::size_t j, const_reference) override;
+        virtual void transpose() override;
+        virtual void transpose_rsd() override;
+        virtual matrix_t<T> transposed() override;
+        virtual matrix_t<T> transposed_rsd() override;
+        
+        using base_matrix_t::size;
+        using base_matrix_t::is_square;
+        using base_matrix_t::operator();
+        using base_matrix_t::try_set_element;
+
+    public:
+        AVector() = default;
+
+        AVector(const AVector &) = default;
+
+        AVector(AVector &&) = default;
+
+        virtual ~AVector() = default;
+
+        AVector &operator=(const AVector &) = default;
+
+        AVector &operator=(AVector &&) = default;
+
+        virtual std::size_t dimension() const = 0;
+
+        virtual reference element(std::size_t coordinate) = 0;
+
+        virtual const_reference element(std::size_t coordinate) const = 0;
+
+        virtual void set_element(std::size_t coordinate, const_reference value) = 0;
+
+        const auto &operator()(std::size_t coordinate) const;
+
+        virtual bool try_set_element(std::size_t coordinate, const_reference value);
+    };
+
+    template <typename T>
+    constexpr bool is_vector() { return std::is_base_of_v<VectorTag, T>; }
+
+    template <typename T>
+    constexpr bool is_exactly_matrix() { return is_matrix<T>() && !is_vector<T>(); }
+}
+
+#endif // MAFOX_AVECTOR_H
+
+namespace mafox
+{
+    template <typename T, typename MatrixHierarchyEnd>
+    std::size_t AVector<T, MatrixHierarchyEnd>::rows() const
+    {
+        MAFOX_FATAL("rows() is meaningless in vector");
+    }
+    
+    template <typename T, typename MatrixHierarchyEnd>
+    std::size_t AVector<T, MatrixHierarchyEnd>::cols() const
+    {
+        MAFOX_FATAL("cols() is meaningless in vector");
+    }
+    
+    template <typename T, typename MatrixHierarchyEnd>
+    typename AVector<T, MatrixHierarchyEnd>::reference AVector<T, MatrixHierarchyEnd>::element(std::size_t i, std::size_t j)
+    {
+        MAFOX_FATAL("element(row, col) is meaningless in vector");
+    }
+    
+    template <typename T, typename MatrixHierarchyEnd>
+    typename AVector<T, MatrixHierarchyEnd>::const_reference AVector<T, MatrixHierarchyEnd>::element(std::size_t i, std::size_t j) const
+    {
+        MAFOX_FATAL("element(row, col) is meaningless in vector");
+    }
+    
+    template <typename T, typename MatrixHierarchyEnd>
+    void AVector<T, MatrixHierarchyEnd>::set_element(std::size_t i, std::size_t j, const_reference)
+    {
+        MAFOX_FATAL("set_element(row, col, value) is meaningless in vector");
+    }
+    
+    template <typename T, typename MatrixHierarchyEnd>
+    void AVector<T, MatrixHierarchyEnd>::transpose()
+    {
+        MAFOX_FATAL("transpose() is meaningless in vector");
+    }
+    
+    template <typename T, typename MatrixHierarchyEnd>
+    void AVector<T, MatrixHierarchyEnd>::transpose_rsd()
+    {
+        MAFOX_FATAL("transpose_rsd() is meaningless in vector");
+    }
+    
+    template <typename T, typename MatrixHierarchyEnd>
+    typename AVector<T, MatrixHierarchyEnd>::template matrix_t<T> AVector<T, MatrixHierarchyEnd>::transposed()
+    {
+        MAFOX_FATAL("transposed() is meaningless in vector");
+    }
+    
+    template <typename T, typename MatrixHierarchyEnd>
+    typename AVector<T, MatrixHierarchyEnd>::template matrix_t<T> AVector<T, MatrixHierarchyEnd>::transposed_rsd()
+    {
+        MAFOX_FATAL("transposed_rsd() is meaningless in vector");
+    }
+
+    template <typename T, typename MatrixHierarchyEnd>
+    const auto &AVector<T, MatrixHierarchyEnd>::operator()(std::size_t coordinate) const
+    {
+        return element(coordinate);
+    }
+
+    template <typename T, typename MatrixHierarchyEnd>
+    bool AVector<T, MatrixHierarchyEnd>::try_set_element(std::size_t coordinate, const_reference value)
+    {
+        set_element(coordinate, value);
+        return true;
+    }
+}
+
+#endif // MAFOX_AVECTOR_INC
+
+#ifndef MAFOX_VECTOR_INC
+#define MAFOX_VECTOR_INC
+
+
+
+#ifndef MAFOX_VECTOR_H
+#define MAFOX_VECTOR_H
+
+
+namespace mafox
+{
+    template <typename T, typename MatrixHierarchyEnd = This>
+    class Vector;
+
+    template <typename T>
+    class vector_data_t;
+
+    template <typename T, typename MatrixHierarchyEnd>
+    struct MatrixTraits<Vector<T, MatrixHierarchyEnd>>
+    {
+        MAFOX_DEFAULT_VECTOR_TRAITS(Vector, T, vector_data_t<T>);
+    };
+
+    template <typename T, typename MatrixHierarchyEnd>
+    class Vector : public MatrixExtender<AVector, Vector<T>, MatrixHierarchyEnd>
+    {
+    public:
+        USING_MAFOX_VECTOR_TYPES(Vector);
+
+        Vector(std::size_t dimension);
+
+        Vector(const Vector &);
+
+        Vector(Vector &&);
+
+        Vector() = delete;
+
+        virtual ~Vector() = default;
+
+        Vector &operator=(const Vector &);
+
+        Vector &operator=(Vector &&);
+
+        virtual std::size_t dimension() const override;
+
+        virtual reference element(std::size_t coordinate) override;
+
+        virtual const_reference element(std::size_t coordinate) const override;
+
+        virtual void set_element(std::size_t coordinate, const_reference value) override;
+
+        virtual std::shared_ptr<IMatrix<T>> share_interface() override;
+
+        virtual std::shared_ptr<const IMatrix<T>> share_interface() const override;
+
+        virtual shared_data_t shared_data() override;
+
+        virtual const_shared_data_t shared_cdata() const override;
+
+        virtual matrix_t<T> share() override;
+
+    protected:
+        Vector(shared_data_t);
+
+        shared_data_t m_data;
+    };
+}
+
+#endif // MAFOX_VECTOR_H
+
+namespace mafox
+{
+    template <typename T>
+    class raw_vector_data_t;
+
+    template <typename T>
+    class vector_data_t
+    {
+    public:
+        virtual ~vector_data_t() {}
+
+        virtual void assign(std::shared_ptr<vector_data_t>) = 0;
+        virtual std::size_t dimension() const = 0;
+        virtual T &element(std::size_t coordinate) = 0;
+        virtual const T &element(std::size_t coordinate) const = 0;
+        virtual void set_element(std::size_t coordinate, const T &) = 0;
+    };
+
+    template <typename T>
+    class raw_vector_data_t : public vector_data_t<T>
+    {
+    public:
+        raw_vector_data_t(std::size_t dimension)
+        : dim(dimension), data(new T[dimension])
+        {}
+
+        virtual ~raw_vector_data_t()
+        {}
+
+        virtual void assign(std::shared_ptr<raw_vector_data_t<T>> m_data)
+        {
+            dim = m_data->dim;
+            data.reset(new T[dim]);
+            memcpy(data.get(), m_data->data.get(), dim * sizeof(T));
+        }
+
+        virtual void assign(std::shared_ptr<vector_data_t<T>> m_data)
+        {
+            if(auto raw_ptr = std::dynamic_pointer_cast<raw_vector_data_t<T>>(m_data))
+                assign(raw_ptr);
+            else
+                MAFOX_FATAL("Invalid vector data");
+        }
+        
+        virtual std::size_t dimension() const override
+        {
+            return dim;
+        }
+        
+        virtual T &element(std::size_t coordinate) override
+        {
+            return data[coordinate];
+        }
+
+        virtual const T &element(std::size_t coordinate) const override
+        {
+            return const_cast<raw_vector_data_t<T>*>(this)->element(coordinate);
+        }
+
+        virtual void set_element(std::size_t coordinate, const T &value) override
+        {
+            assert(coordinate < dim);
+            element(coordinate) = value;
+        }
+
+        std::size_t dim;
+        std::unique_ptr<T[]> data;
+    };
+
+    template <typename T, typename MatrixHierarchyEnd>
+    Vector<T, MatrixHierarchyEnd>::Vector(std::size_t dimension)
+    : m_data(std::make_shared<raw_vector_data_t<T>>(dimension))
+    {
+        zero_array(std::static_pointer_cast<raw_vector_data_t<T>>(m_data)->data.get(), dimension * sizeof(T));
+    }
+
+    template <typename T, typename MatrixHierarchyEnd>
+    Vector<T, MatrixHierarchyEnd>::Vector(const Vector &other)
+    : m_data(std::make_shared<raw_vector_data_t<T>>(other.dimension()))
+    {
+        m_data->assign(other.m_data);
+    }
+
+    template <typename T, typename MatrixHierarchyEnd>
+    Vector<T, MatrixHierarchyEnd>::Vector(Vector &&other)
+    : m_data(std::move(other.m_data))
+    {}
+
+    template <typename T, typename MatrixHierarchyEnd>
+    Vector<T, MatrixHierarchyEnd>::Vector(shared_data_t m_data)
+    : m_data(m_data)
+    {}
+
+    template <typename T, typename MatrixHierarchyEnd>
+    Vector<T, MatrixHierarchyEnd> &Vector<T, MatrixHierarchyEnd>::operator=(const Vector &rhs)
+    {
+        if(this != &rhs)
+            *this = std::move(Vector<T, MatrixHierarchyEnd>(rhs));
+        return *this;
+    }
+
+    template <typename T, typename MatrixHierarchyEnd>
+    Vector<T, MatrixHierarchyEnd> &Vector<T, MatrixHierarchyEnd>::operator=(Vector &&rhs)
+    {
+        if(this != &rhs)
+            m_data = std::move(rhs.m_data);
+        return *this;
+    }
+
+    template <typename T, typename MatrixHierarchyEnd>
+    std::size_t Vector<T, MatrixHierarchyEnd>::dimension() const
+    {
+        return m_data->dimension();
+    }
+
+    template <typename T, typename MatrixHierarchyEnd>
+    typename Vector<T, MatrixHierarchyEnd>::reference Vector<T, MatrixHierarchyEnd>::element(std::size_t coordinate)
+    {
+        return m_data->element(coordinate);
+    }
+
+    template <typename T, typename MatrixHierarchyEnd>
+    typename Vector<T, MatrixHierarchyEnd>::const_reference Vector<T, MatrixHierarchyEnd>::element(std::size_t coordinate) const
+    {
+        return const_cast<Vector<T, MatrixHierarchyEnd>*>(this)->element(coordinate);
+    }
+
+    template <typename T, typename MatrixHierarchyEnd>
+    void Vector<T, MatrixHierarchyEnd>::set_element(std::size_t coordinate, const_reference value)
+    {
+        m_data->set_element(coordinate, value);
+    }
+
+    template <typename T, typename MatrixHierarchyEnd>
+    std::shared_ptr<IMatrix<T>> Vector<T, MatrixHierarchyEnd>::share_interface()
+    {
+        return std::shared_ptr<Vector<T, MatrixHierarchyEnd>>(new Vector<T, MatrixHierarchyEnd>(m_data));
+    }
+
+    template <typename T, typename MatrixHierarchyEnd>
+    std::shared_ptr<const IMatrix<T>> Vector<T, MatrixHierarchyEnd>::share_interface() const
+    {
+        return std::shared_ptr<const Vector<T, MatrixHierarchyEnd>>(new Vector<T, MatrixHierarchyEnd>(m_data));
+    }
+
+    template <typename T, typename MatrixHierarchyEnd>
+    typename Vector<T, MatrixHierarchyEnd>::shared_data_t Vector<T, MatrixHierarchyEnd>::shared_data()
+    {
+        return m_data;
+    }
+
+    template <typename T, typename MatrixHierarchyEnd>
+    typename Vector<T, MatrixHierarchyEnd>::const_shared_data_t Vector<T, MatrixHierarchyEnd>::shared_cdata() const
+    {
+        return m_data;
+    }
+
+    template <typename T, typename MatrixHierarchyEnd>
+    typename Vector<T, MatrixHierarchyEnd>::template matrix_t<T> Vector<T, MatrixHierarchyEnd>::share()
+    {
+        return Vector<T, MatrixHierarchyEnd>(m_data);
+    }
+}
+
+#endif // MAFOX_VECTOR_INC
 
 // #include "fdm.h"
 

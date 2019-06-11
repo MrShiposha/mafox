@@ -8,8 +8,8 @@
 #include "bandmatrix.inc"
 #include "tridiagonalmatrix.inc"
 
-// #include "avector.h"
-// #include "vector.h"
+#include "avector.inc"
+#include "vector.inc"
 
 // #include "fdm.h"
 
