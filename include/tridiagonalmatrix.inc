@@ -5,33 +5,43 @@
 
 namespace mafox
 {
-    template <typename T>
-    TridiagonalMatrix<T>::TridiagonalMatrix(std::size_t size)
-    : BandMatrix<T>(size, 1, 1)
+    template <typename T, typename MatrixHierarchyEnd>
+    TridiagonalMatrix<T, MatrixHierarchyEnd>::TridiagonalMatrix(std::size_t size)
+    : base_matrix_t(size, 1, 1)
     {}
 
-    template <typename T>
-    typename TridiagonalMatrix<T>::pointer TridiagonalMatrix<T>::lower_diagonal_data()
+    template <typename T, typename MatrixHierarchyEnd>
+    TridiagonalMatrix<T, MatrixHierarchyEnd>::TridiagonalMatrix(base_matrix_t &&other)
+    : base_matrix_t(std::forward<base_matrix_t>(other))
+    {}
+
+    template <typename T, typename MatrixHierarchyEnd>
+    TridiagonalMatrix<T, MatrixHierarchyEnd>::TridiagonalMatrix(shared_data_t m_data)
+    : base_matrix_t(m_data)
+    {}
+
+    template <typename T, typename MatrixHierarchyEnd>
+    typename TridiagonalMatrix<T, MatrixHierarchyEnd>::pointer TridiagonalMatrix<T, MatrixHierarchyEnd>::lower_diagonal_data()
     {
-        return BandMatrix<T>::lower_diagonal_data(0);
+        return base_matrix_t::lower_diagonal_data(0);
     }
 
-    template <typename T>
-    typename TridiagonalMatrix<T>::const_pointer TridiagonalMatrix<T>::lower_diagonal_cdata() const
+    template <typename T, typename MatrixHierarchyEnd>
+    typename TridiagonalMatrix<T, MatrixHierarchyEnd>::const_pointer TridiagonalMatrix<T, MatrixHierarchyEnd>::lower_diagonal_cdata() const
     {
-        return BandMatrix<T>::lower_diagonal_cdata(0);
+        return base_matrix_t::lower_diagonal_cdata(0);
     }
 
-    template <typename T>
-    typename TridiagonalMatrix<T>::pointer TridiagonalMatrix<T>::upper_diagonal_data()
+    template <typename T, typename MatrixHierarchyEnd>
+    typename TridiagonalMatrix<T, MatrixHierarchyEnd>::pointer TridiagonalMatrix<T, MatrixHierarchyEnd>::upper_diagonal_data()
     {
-        return BandMatrix<T>::upper_diagonal_data(0);
+        return base_matrix_t::upper_diagonal_data(0);
     }
 
-    template <typename T>
-    typename TridiagonalMatrix<T>::const_pointer TridiagonalMatrix<T>::upper_diagonal_cdata() const
+    template <typename T, typename MatrixHierarchyEnd>
+    typename TridiagonalMatrix<T, MatrixHierarchyEnd>::const_pointer TridiagonalMatrix<T, MatrixHierarchyEnd>::upper_diagonal_cdata() const
     {
-        return BandMatrix<T>::upper_diagonal_cdata(0);
+        return base_matrix_t::upper_diagonal_cdata(0);
     }
 }
 

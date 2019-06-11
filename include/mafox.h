@@ -6,7 +6,7 @@
 #include "amatrix.inc"
 // #include "matrix.inc"
 #include "bandmatrix.inc"
-// #include "tridiagonalmatrix.inc"
+#include "tridiagonalmatrix.inc"
 
 // #include "avector.h"
 // #include "vector.h"

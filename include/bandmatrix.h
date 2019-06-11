@@ -23,7 +23,7 @@ namespace mafox
     class BandMatrix : public MatrixExtender<AMatrix, BandMatrix<T>, MatrixHierarchyEnd>
     {
     public:
-        USING_MAFOX_MATRIX_TYPES(BandMatrix);
+        USING_MAFOX_MATRIX_TYPES(BandMatrix<T>);
 
         BandMatrix(std::size_t size, std::size_t lower_bandwidth, std::size_t upper_bandwidth);
 

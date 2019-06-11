@@ -5,13 +5,16 @@
 
 namespace mafox
 {
-    template <typename T>
-    class TridiagonalMatrix : public BandMatrix<T>
+    template <typename T, typename MatrixHierarchyEnd = This>
+    class TridiagonalMatrix : public MatrixExtender<BandMatrix, TridiagonalMatrix<T>, MatrixHierarchyEnd>
     {
     public:
-        USING_MAFOX_MATRIX_TYPES(BandMatrix<T>);
+        using base_matrix_t = MatrixExtender<::mafox::BandMatrix, TridiagonalMatrix<T>, MatrixHierarchyEnd>;
+        USING_MAFOX_MATRIX_TYPES(TridiagonalMatrix);
 
         TridiagonalMatrix(std::size_t size);
+
+        TridiagonalMatrix(base_matrix_t &&);
 
         TridiagonalMatrix(const TridiagonalMatrix &) = default;
 
@@ -30,12 +33,15 @@ namespace mafox
         pointer upper_diagonal_data();
 
         const_pointer upper_diagonal_cdata() const;
+
+    protected:
+        TridiagonalMatrix(shared_data_t);
     };
 
-    template <typename T>
-    struct MatrixTraits<TridiagonalMatrix<T>>
+    template <typename T, typename MatrixHierarchyEnd>
+    struct MatrixTraits<TridiagonalMatrix<T, MatrixHierarchyEnd>>
     {
-        MAFOX_INHERIT_TRAITS(BandMatrix<T>);
+        MAFOX_INHERIT_TRAITS(TridiagonalMatrix, T, BandMatrix);
     };
 }
 

@@ -8,6 +8,7 @@
 #include <iostream>
 #include <iomanip>
 #include <memory>
+#include <cstring>
 
 #ifndef MAFOX_H
 #define MAFOX_H
@@ -2160,30 +2161,32 @@ namespace mafox
 
 
 #define MAFOX_DEFAULT_MATRIX_TRAITS(user_matrix_t, value_t, user_data_t)   \
-        template <typename ___MAFOX_T>                                     \
-        using matrix_t            = user_matrix_t<___MAFOX_T>;             \
-        using data_t              = user_data_t;                           \
-        using shared_data_t       = std::shared_ptr<data_t>;               \
-        using const_shared_data_t = std::shared_ptr<const data_t>;         \
-        using difference_type     = std::ptrdiff_t;                        \
-        using value_type          = std::remove_cv_t<value_t>;             \
-        using pointer             = value_t *;                             \
-        using const_pointer       = const value_t *;                       \
-        using reference           = value_t &;                             \
-        using const_reference     = const value_t &
+    template <typename ___MAFOX_T>                                     \
+    using matrix_t            = user_matrix_t<___MAFOX_T>;             \
+    using data_t              = user_data_t;                           \
+    using shared_data_t       = std::shared_ptr<data_t>;               \
+    using const_shared_data_t = std::shared_ptr<const data_t>;         \
+    using difference_type     = std::ptrdiff_t;                        \
+    using value_type          = std::remove_cv_t<value_t>;             \
+    using pointer             = value_t *;                             \
+    using const_pointer       = const value_t *;                       \
+    using reference           = value_t &;                             \
+    using const_reference     = const value_t &
 
-#define MAFOX_INHERIT_TRAITS(this_t, base_t)                              \
-        template <typename ___MAFOX_T>                                    \
-        using matrix_t            = this_t<___MAFOX_T>;                   \
-        using data_t              = typename base_t::data_t;              \
-        using shared_data_t       = typename base_t::shared_data_t;       \
-        using const_shared_data_t = typename base_t::const_shared_data_t; \
-        using difference_type     = typename base_t::difference_type;     \
-        using value_type          = typename base_t::value_type;          \
-        using pointer             = typename base_t::pointer;             \
-        using const_pointer       = typename base_t::const_pointer;       \
-        using reference           = typename base_t::reference;           \
-        using const_reference     = typename base_t::const_reference
+#define MAFOX_BASEMATRIX(this_t, value_t, base_t) base_t<value_t, this_t<value_t>>
+
+#define MAFOX_INHERIT_TRAITS(this_t, value_t, base_t)                                                    \
+    template <typename ___MAFOX_T>                                                                       \
+    using matrix_t            = this_t<___MAFOX_T>;                                                      \
+    using data_t              = typename MAFOX_BASEMATRIX(this_t, value_t, base_t)::data_t;              \
+    using shared_data_t       = typename MAFOX_BASEMATRIX(this_t, value_t, base_t)::shared_data_t;       \
+    using const_shared_data_t = typename MAFOX_BASEMATRIX(this_t, value_t, base_t)::const_shared_data_t; \
+    using difference_type     = typename MAFOX_BASEMATRIX(this_t, value_t, base_t)::difference_type;     \
+    using value_type          = typename MAFOX_BASEMATRIX(this_t, value_t, base_t)::value_type;          \
+    using pointer             = typename MAFOX_BASEMATRIX(this_t, value_t, base_t)::pointer;             \
+    using const_pointer       = typename MAFOX_BASEMATRIX(this_t, value_t, base_t)::const_pointer;       \
+    using reference           = typename MAFOX_BASEMATRIX(this_t, value_t, base_t)::reference;           \
+    using const_reference     = typename MAFOX_BASEMATRIX(this_t, value_t, base_t)::const_reference
 
 namespace mafox
 {
@@ -2322,6 +2325,7 @@ std::ostream &operator<<(std::ostream &os, const mafox::AMatrix<T, MatrixHierarc
 #define MAFOX_BANDMATRIX_INC
 
 
+
 #ifndef MAFOX_BANDMATRIX_H
 #define MAFOX_BANDMATRIX_H
 
@@ -2345,7 +2349,7 @@ namespace mafox
     class BandMatrix : public MatrixExtender<AMatrix, BandMatrix<T>, MatrixHierarchyEnd>
     {
     public:
-        USING_MAFOX_MATRIX_TYPES(BandMatrix);
+        USING_MAFOX_MATRIX_TYPES(BandMatrix<T>);
 
         BandMatrix(std::size_t size, std::size_t lower_bandwidth, std::size_t upper_bandwidth);
 
@@ -2744,7 +2748,102 @@ namespace mafox
 }
 
 #endif // MAFOX_BANDMATRIX_INC
-// #include "tridiagonalmatrix.inc"
+
+#ifndef MAFOX_TRIDIAGONALMATRIX_INC
+#define MAFOX_TRIDIAGONALMATRIX_INC
+
+
+#ifndef MAFOX_TRIDIAGONALMATRIX_H
+#define MAFOX_TRIDIAGONALMATRIX_H
+
+
+namespace mafox
+{
+    template <typename T, typename MatrixHierarchyEnd = This>
+    class TridiagonalMatrix : public MatrixExtender<BandMatrix, TridiagonalMatrix<T>, MatrixHierarchyEnd>
+    {
+    public:
+        using base_matrix_t = MatrixExtender<::mafox::BandMatrix, TridiagonalMatrix<T>, MatrixHierarchyEnd>;
+        USING_MAFOX_MATRIX_TYPES(TridiagonalMatrix);
+
+        TridiagonalMatrix(std::size_t size);
+
+        TridiagonalMatrix(base_matrix_t &&);
+
+        TridiagonalMatrix(const TridiagonalMatrix &) = default;
+
+        TridiagonalMatrix(TridiagonalMatrix &&) = default;
+
+        virtual ~TridiagonalMatrix() = default;
+
+        TridiagonalMatrix &operator=(const TridiagonalMatrix &) = default;
+
+        TridiagonalMatrix &operator=(TridiagonalMatrix &&) = default;
+
+        pointer lower_diagonal_data();
+
+        const_pointer lower_diagonal_cdata() const;
+
+        pointer upper_diagonal_data();
+
+        const_pointer upper_diagonal_cdata() const;
+
+    protected:
+        TridiagonalMatrix(shared_data_t);
+    };
+
+    template <typename T, typename MatrixHierarchyEnd>
+    struct MatrixTraits<TridiagonalMatrix<T, MatrixHierarchyEnd>>
+    {
+        MAFOX_INHERIT_TRAITS(TridiagonalMatrix, T, BandMatrix);
+    };
+}
+
+#endif // MAFOX_TRIDIAGONALMATRIX_H
+
+namespace mafox
+{
+    template <typename T, typename MatrixHierarchyEnd>
+    TridiagonalMatrix<T, MatrixHierarchyEnd>::TridiagonalMatrix(std::size_t size)
+    : base_matrix_t(size, 1, 1)
+    {}
+
+    template <typename T, typename MatrixHierarchyEnd>
+    TridiagonalMatrix<T, MatrixHierarchyEnd>::TridiagonalMatrix(base_matrix_t &&other)
+    : base_matrix_t(std::forward<base_matrix_t>(other))
+    {}
+
+    template <typename T, typename MatrixHierarchyEnd>
+    TridiagonalMatrix<T, MatrixHierarchyEnd>::TridiagonalMatrix(shared_data_t m_data)
+    : base_matrix_t(m_data)
+    {}
+
+    template <typename T, typename MatrixHierarchyEnd>
+    typename TridiagonalMatrix<T, MatrixHierarchyEnd>::pointer TridiagonalMatrix<T, MatrixHierarchyEnd>::lower_diagonal_data()
+    {
+        return base_matrix_t::lower_diagonal_data(0);
+    }
+
+    template <typename T, typename MatrixHierarchyEnd>
+    typename TridiagonalMatrix<T, MatrixHierarchyEnd>::const_pointer TridiagonalMatrix<T, MatrixHierarchyEnd>::lower_diagonal_cdata() const
+    {
+        return base_matrix_t::lower_diagonal_cdata(0);
+    }
+
+    template <typename T, typename MatrixHierarchyEnd>
+    typename TridiagonalMatrix<T, MatrixHierarchyEnd>::pointer TridiagonalMatrix<T, MatrixHierarchyEnd>::upper_diagonal_data()
+    {
+        return base_matrix_t::upper_diagonal_data(0);
+    }
+
+    template <typename T, typename MatrixHierarchyEnd>
+    typename TridiagonalMatrix<T, MatrixHierarchyEnd>::const_pointer TridiagonalMatrix<T, MatrixHierarchyEnd>::upper_diagonal_cdata() const
+    {
+        return base_matrix_t::upper_diagonal_cdata(0);
+    }
+}
+
+#endif // MAFOX_TRIDIAGONALMATRIX_INC
 
 // #include "avector.h"
 // #include "vector.h"
