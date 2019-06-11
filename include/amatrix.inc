@@ -5,30 +5,42 @@
 
 namespace mafox
 {
-    template <typename Matrix, typename MatrixHierarchyEnd>
-    typename AMatrix<Matrix, MatrixHierarchyEnd>::Size AMatrix<Matrix, MatrixHierarchyEnd>::size() const
+    template <typename T, typename MatrixHierarchyEnd>
+    typename AMatrix<T, MatrixHierarchyEnd>::Size AMatrix<T, MatrixHierarchyEnd>::size() const
     {
         return Size { this->rows(), this->cols() };
     }
 
-    template <typename Matrix, typename MatrixHierarchyEnd>
-    bool AMatrix<Matrix, MatrixHierarchyEnd>::is_square() const
+    template <typename T, typename MatrixHierarchyEnd>
+    bool AMatrix<T, MatrixHierarchyEnd>::is_square() const
     {
         return this->rows() == this->cols();
     }
 
-    template <typename Matrix, typename MatrixHierarchyEnd>
-    mafox_inline typename AMatrix<Matrix, MatrixHierarchyEnd>::const_reference 
-    AMatrix<Matrix, MatrixHierarchyEnd>::operator()(std::size_t i, std::size_t j) const
+    template <typename T, typename MatrixHierarchyEnd>
+    mafox_inline typename AMatrix<T, MatrixHierarchyEnd>::const_reference 
+    AMatrix<T, MatrixHierarchyEnd>::operator()(std::size_t i, std::size_t j) const
     {
         return this->element(i, j);
     }
 
-    template <typename Matrix, typename MatrixHierarchyEnd>
-    bool AMatrix<Matrix, MatrixHierarchyEnd>::try_set_element(std::size_t i, std::size_t j, const_reference value)
+    template <typename T, typename MatrixHierarchyEnd>
+    bool AMatrix<T, MatrixHierarchyEnd>::try_set_element(std::size_t i, std::size_t j, const_reference value)
     {
         this->set_element(i, j, value);
         return true;
+    }
+
+    template <typename T, typename MatrixHierarchyEnd>
+    std::shared_ptr<typename AMatrix<T, MatrixHierarchyEnd>::template matrix_t<T>> AMatrix<T, MatrixHierarchyEnd>::share_ptr()
+    {
+        return std::make_shared<matrix_t<T>>(std::move(share()));
+    }
+
+    template <typename T, typename MatrixHierarchyEnd>
+    std::shared_ptr<const typename AMatrix<T, MatrixHierarchyEnd>::template matrix_t<T>> AMatrix<T, MatrixHierarchyEnd>::share_ptr() const
+    {
+        return std::const_pointer_cast<const matrix_t<T>>(const_cast<AMatrix<T, MatrixHierarchyEnd>*>(this)->share_ptr());
     }
 }
 

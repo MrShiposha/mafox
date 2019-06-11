@@ -6,23 +6,8 @@
 namespace mafox
 {
     template <typename Matrix, typename Vector>
-    AMatrixEquation<Matrix, Vector>::AMatrixEquation(const Matrix &m, const Vector &v)
+    AMatrixEquation<Matrix, Vector>::AMatrixEquation(std::shared_ptr<const Matrix> m, std::shared_ptr<const Vector> v)
     : matrix(m), vector(v)
-    {}
-
-    template <typename Matrix, typename Vector>
-    AMatrixEquation<Matrix, Vector>::AMatrixEquation(Matrix &&m, const Vector &v)
-    : matrix(std::forward<Matrix>(m)), vector(v)
-    {}
-
-    template <typename Matrix, typename Vector>
-    AMatrixEquation<Matrix, Vector>::AMatrixEquation(const Matrix &m, Vector &&v)
-    : matrix(m), vector(std::forward<Vector>(v))
-    {}
-
-    template <typename Matrix, typename Vector>
-    AMatrixEquation<Matrix, Vector>::AMatrixEquation(Matrix &&m, Vector &&v)
-    : matrix(std::forward<Matrix>(m)), vector(std::forward<Vector>(v))
     {}
 }
 

@@ -10,16 +10,10 @@ namespace mafox
     class AMatrixEquation
     {
     public:
-        static_assert(std::is_base_of_v<MatrixTag, Matrix>);
-        static_assert(std::is_base_of_v<VectorTag, Vector>);
+        static_assert(is_matrix<Matrix>());
+        static_assert(is_vector<Vector>());
 
-        AMatrixEquation(const Matrix &, const Vector &);
-
-        AMatrixEquation(Matrix &&, const Vector &);
-
-        AMatrixEquation(const Matrix &, Vector &&);
-
-        AMatrixEquation(Matrix &&, Vector &&);
+        AMatrixEquation(std::shared_ptr<const Matrix>, std::shared_ptr<const Vector>);
 
         AMatrixEquation() = delete;
 
@@ -34,8 +28,8 @@ namespace mafox
         AMatrixEquation &operator=(AMatrixEquation &&) = delete;
 
     protected:
-        Matrix matrix;
-        Vector vector;
+        std::shared_ptr<const Matrix> matrix;
+        std::shared_ptr<const Vector> vector;
     };
 }
 

@@ -14,17 +14,17 @@ namespace mafox
         using R = std::common_type_t<T, typename Vector::value_type>;
         using Result = typename Vector::template vector_t<R>;
 
-        const std::size_t N = this->vector.dimension();
+        const std::size_t N = this->vector->dimension();
 
         std::unique_ptr<R[]> xi(new R[N-1]);
         std::unique_ptr<R[]> eta(new R[N-1]);
 
-        auto *a = this->matrix.lower_diagonal_cdata();
-        auto *b = this->matrix.diagonal_cdata();
-        auto *c = this->matrix.upper_diagonal_cdata();
+        auto *a = this->matrix->lower_diagonal_cdata();
+        auto *b = this->matrix->diagonal_cdata();
+        auto *c = this->matrix->upper_diagonal_cdata();
 
         xi[0]  = -c[0] / b[0];
-        eta[0] = this->vector(0) / b[0];
+        eta[0] = this->vector->element(0) / b[0];
 
         R div = 0;
         for(std::size_t i = 1, j = 0; i < N-1; ++i, ++j)
@@ -33,12 +33,12 @@ namespace mafox
             assert(div != 0);
 
             xi[i] = -c[i] / div;
-            eta[i] = (this->vector(i) - a[j]*eta[j]) / div;
+            eta[i] = (this->vector->element(i) - a[j]*eta[j]) / div;
         }
 
         Result result(N);
 
-        result.set_element(N-1, formula(xi[N-2], eta[N-2], a[N-2], b[N-1], c[N-2], this->vector(N-1)));
+        result.set_element(N-1, formula(xi[N-2], eta[N-2], a[N-2], b[N-1], c[N-2], this->vector->element(N-1)));
         for(std::size_t i = N-1, j = N-2; i > 0; --i, --j)
             result.set_element(j, xi[j]*result(i) + eta[j]);
 

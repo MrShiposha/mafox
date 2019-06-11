@@ -132,6 +132,10 @@ namespace mafox
         virtual const_shared_data_t shared_cdata() const = 0;
 
         virtual matrix_t<T> share() = 0;
+
+        std::shared_ptr<matrix_t<T>> share_ptr();
+
+        std::shared_ptr<const matrix_t<T>> share_ptr() const;
     };
 }
 

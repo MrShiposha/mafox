@@ -10,11 +10,9 @@ namespace mafox
     class HomogeneousMatrixEquation
     {
     public:
-        static_assert(std::is_base_of_v<MatrixTag, Matrix>);
+        static_assert(is_matrix<Matrix>());
 
         HomogeneousMatrixEquation(const Matrix &);
-
-        HomogeneousMatrixEquation(Matrix &&);
 
         HomogeneousMatrixEquation() = delete;
 
@@ -36,7 +34,7 @@ namespace mafox
         // TODO auto solve();
 
     private:
-        Matrix matrix;
+        std::shared_ptr<const Matrix> matrix;
     };
 }
 

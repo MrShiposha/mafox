@@ -2269,6 +2269,10 @@ namespace mafox
         virtual const_shared_data_t shared_cdata() const = 0;
 
         virtual matrix_t<T> share() = 0;
+
+        std::shared_ptr<matrix_t<T>> share_ptr();
+
+        std::shared_ptr<const matrix_t<T>> share_ptr() const;
     };
 }
 
@@ -2305,30 +2309,42 @@ namespace mafox::detail
 
 namespace mafox
 {
-    template <typename Matrix, typename MatrixHierarchyEnd>
-    typename AMatrix<Matrix, MatrixHierarchyEnd>::Size AMatrix<Matrix, MatrixHierarchyEnd>::size() const
+    template <typename T, typename MatrixHierarchyEnd>
+    typename AMatrix<T, MatrixHierarchyEnd>::Size AMatrix<T, MatrixHierarchyEnd>::size() const
     {
         return Size { this->rows(), this->cols() };
     }
 
-    template <typename Matrix, typename MatrixHierarchyEnd>
-    bool AMatrix<Matrix, MatrixHierarchyEnd>::is_square() const
+    template <typename T, typename MatrixHierarchyEnd>
+    bool AMatrix<T, MatrixHierarchyEnd>::is_square() const
     {
         return this->rows() == this->cols();
     }
 
-    template <typename Matrix, typename MatrixHierarchyEnd>
-    mafox_inline typename AMatrix<Matrix, MatrixHierarchyEnd>::const_reference 
-    AMatrix<Matrix, MatrixHierarchyEnd>::operator()(std::size_t i, std::size_t j) const
+    template <typename T, typename MatrixHierarchyEnd>
+    mafox_inline typename AMatrix<T, MatrixHierarchyEnd>::const_reference 
+    AMatrix<T, MatrixHierarchyEnd>::operator()(std::size_t i, std::size_t j) const
     {
         return this->element(i, j);
     }
 
-    template <typename Matrix, typename MatrixHierarchyEnd>
-    bool AMatrix<Matrix, MatrixHierarchyEnd>::try_set_element(std::size_t i, std::size_t j, const_reference value)
+    template <typename T, typename MatrixHierarchyEnd>
+    bool AMatrix<T, MatrixHierarchyEnd>::try_set_element(std::size_t i, std::size_t j, const_reference value)
     {
         this->set_element(i, j, value);
         return true;
+    }
+
+    template <typename T, typename MatrixHierarchyEnd>
+    std::shared_ptr<typename AMatrix<T, MatrixHierarchyEnd>::template matrix_t<T>> AMatrix<T, MatrixHierarchyEnd>::share_ptr()
+    {
+        return std::make_shared<matrix_t<T>>(std::move(share()));
+    }
+
+    template <typename T, typename MatrixHierarchyEnd>
+    std::shared_ptr<const typename AMatrix<T, MatrixHierarchyEnd>::template matrix_t<T>> AMatrix<T, MatrixHierarchyEnd>::share_ptr() const
+    {
+        return std::const_pointer_cast<const matrix_t<T>>(const_cast<AMatrix<T, MatrixHierarchyEnd>*>(this)->share_ptr());
     }
 }
 
@@ -3685,10 +3701,254 @@ namespace mafox
 
 // #include "fdm.h"
 
-// #include "unknownvariable.inc"
-// #include "amatrixequation.inc"
-// #include "matrixequation.inc"
-// #include "homogeneousmatrixequation.inc"
+
+#ifndef MAFOX_UNKNOWNVARIABLE_INC
+#define MAFOX_UNKNOWNVARIABLE_INC
+
+
+#ifndef MAFOX_UNKNOWNVARIABLE_H
+#define MAFOX_UNKNOWNVARIABLE_H
+
+
+#ifndef MAFOX_HOMOGENEOUSMATRIXEQUATION_H
+#define MAFOX_HOMOGENEOUSMATRIXEQUATION_H
+
+
+#ifndef MAFOX_MATRIXEQUATION_H
+#define MAFOX_MATRIXEQUATION_H
+
+
+#ifndef MAFOX_AMATRIXEQUATION_H
+#define MAFOX_AMATRIXEQUATION_H
+
+
+namespace mafox
+{
+    template <typename Matrix, typename Vector>
+    class AMatrixEquation
+    {
+    public:
+        static_assert(is_matrix<Matrix>());
+        static_assert(is_vector<Vector>());
+
+        AMatrixEquation(std::shared_ptr<const Matrix>, std::shared_ptr<const Vector>);
+
+        AMatrixEquation() = delete;
+
+        AMatrixEquation(const AMatrixEquation &) = default;
+
+        AMatrixEquation(AMatrixEquation &&) = default;
+
+        virtual ~AMatrixEquation() = default;
+
+        AMatrixEquation &operator=(const AMatrixEquation &) = delete;
+
+        AMatrixEquation &operator=(AMatrixEquation &&) = delete;
+
+    protected:
+        std::shared_ptr<const Matrix> matrix;
+        std::shared_ptr<const Vector> vector;
+    };
+}
+
+#endif // MAFOX_AMATRIXEQUATION_H
+
+namespace mafox
+{
+    template <typename Matrix, typename Vector>
+    class MatrixEquation;
+
+    template <typename T, typename Vector>
+    class MatrixEquation<TridiagonalMatrix<T>, Vector>
+        : public AMatrixEquation<TridiagonalMatrix<T>, Vector>
+    {
+    public:
+        using AMatrixEquation<TridiagonalMatrix<T>, Vector>::AMatrixEquation;
+
+        template <typename LastVariableFormula>
+        auto solve(LastVariableFormula) const
+            -> typename Vector::template vector_t<std::common_type_t<T, typename Vector::value_type>>;
+
+        auto solve() const
+            -> typename Vector::template vector_t<std::common_type_t<T, typename Vector::value_type>>;
+    };
+}
+
+#endif // MAFOX_MATRIXEQUATION_H
+
+namespace mafox
+{
+    template <typename Matrix>
+    class HomogeneousMatrixEquation
+    {
+    public:
+        static_assert(is_matrix<Matrix>());
+
+        HomogeneousMatrixEquation(const Matrix &);
+
+        HomogeneousMatrixEquation() = delete;
+
+        HomogeneousMatrixEquation(const HomogeneousMatrixEquation &) = default;
+
+        HomogeneousMatrixEquation(HomogeneousMatrixEquation &&) = default;
+
+        ~HomogeneousMatrixEquation() = default;
+
+        HomogeneousMatrixEquation &operator=(const HomogeneousMatrixEquation &) = delete;
+
+        HomogeneousMatrixEquation &operator=(HomogeneousMatrixEquation &&) = delete;
+
+        // TODO for lvalue eq and rvalue vector
+        template <typename Vector>
+        auto operator=(const Vector &) const &&
+            -> MatrixEquation<Matrix, Vector>;
+
+        // TODO auto solve();
+
+    private:
+        std::shared_ptr<const Matrix> matrix;
+    };
+}
+
+#endif // MAFOX_HOMOGENEOUSMATRIXEQUATION_H
+
+namespace mafox
+{
+    enum UnknownVariable
+    {
+        X = 0,
+        Y,
+        Z
+    };
+
+    template <typename Matrix>
+    auto operator*(const Matrix &, UnknownVariable)
+        -> HomogeneousMatrixEquation<Matrix>;
+
+}
+
+#endif // MAFOX_UNKNOWNVARIABLE_H
+
+namespace mafox
+{
+    template <typename Matrix>
+    auto operator*(const Matrix &matrix, UnknownVariable)
+        -> HomogeneousMatrixEquation<Matrix>
+    {
+        return HomogeneousMatrixEquation<Matrix>(matrix);
+    }
+}
+
+#endif // MAFOX_UNKNOWNVARIABLE_INC
+
+#ifndef MAFOX_AMATRIXEQUATION_INC
+#define MAFOX_AMATRIXEQUATION_INC
+
+
+namespace mafox
+{
+    template <typename Matrix, typename Vector>
+    AMatrixEquation<Matrix, Vector>::AMatrixEquation(std::shared_ptr<const Matrix> m, std::shared_ptr<const Vector> v)
+    : matrix(m), vector(v)
+    {}
+}
+
+#endif // MAFOX_AMATRIXEQUATION_INC
+
+#ifndef MAFOX_MATRIXEQUATION_INC
+#define MAFOX_MATRIXEQUATION_INC
+
+
+namespace mafox
+{
+    template <typename T, typename Vector>
+    template <typename LastVariableFormula>
+    auto MatrixEquation<TridiagonalMatrix<T>, Vector>::solve(LastVariableFormula formula) const
+        -> typename Vector::template vector_t<std::common_type_t<T, typename Vector::value_type>>
+    {
+        using R = std::common_type_t<T, typename Vector::value_type>;
+        using Result = typename Vector::template vector_t<R>;
+
+        const std::size_t N = this->vector->dimension();
+
+        std::unique_ptr<R[]> xi(new R[N-1]);
+        std::unique_ptr<R[]> eta(new R[N-1]);
+
+        auto *a = this->matrix->lower_diagonal_cdata();
+        auto *b = this->matrix->diagonal_cdata();
+        auto *c = this->matrix->upper_diagonal_cdata();
+
+        xi[0]  = -c[0] / b[0];
+        eta[0] = this->vector->element(0) / b[0];
+
+        R div = 0;
+        for(std::size_t i = 1, j = 0; i < N-1; ++i, ++j)
+        {
+            div = (b[i] + a[j]*xi[j]);
+            assert(div != 0);
+
+            xi[i] = -c[i] / div;
+            eta[i] = (this->vector->element(i) - a[j]*eta[j]) / div;
+        }
+
+        Result result(N);
+
+        result.set_element(N-1, formula(xi[N-2], eta[N-2], a[N-2], b[N-1], c[N-2], this->vector->element(N-1)));
+        for(std::size_t i = N-1, j = N-2; i > 0; --i, --j)
+            result.set_element(j, xi[j]*result(i) + eta[j]);
+
+        return result;
+    }
+
+    template <typename T, typename Vector>
+    auto MatrixEquation<TridiagonalMatrix<T>, Vector>::solve() const
+        -> typename Vector::template vector_t<std::common_type_t<T, typename Vector::value_type>>
+    {
+        return solve
+        (
+            []
+            (
+                const auto &xi, 
+                const auto &eta, 
+                const auto &a, 
+                const auto &b, 
+                const auto &c, 
+                const auto &d
+            ) 
+            { 
+                return (d - a*eta) / (b + a*xi);
+            }
+        );
+    }
+}
+
+#endif // MAFOX_MATRIXEQUATION_INC
+
+#ifndef MAFOX_HOMOGENEOUSMATRIXEQUATION_INC
+#define MAFOX_HOMOGENEOUSMATRIXEQUATION_INC
+
+
+namespace mafox
+{
+    template <typename Matrix>
+    HomogeneousMatrixEquation<Matrix>::HomogeneousMatrixEquation(const Matrix &matrix)
+    : matrix(matrix.share_ptr())
+    {
+        assert(matrix.is_square());
+    }
+
+    template <typename Matrix>
+    template <typename Vector>
+    auto HomogeneousMatrixEquation<Matrix>::operator=(const Vector &vector) const &&
+        -> MatrixEquation<Matrix, Vector>
+    {
+        assert(vector.dimension() == matrix->rows());
+
+        return MatrixEquation<Matrix, Vector>(matrix, vector.share_ptr());
+    }
+}
+
+#endif // MAFOX_HOMOGENEOUSMATRIXEQUATION_INC
 
 #endif // MAFOX_H
 

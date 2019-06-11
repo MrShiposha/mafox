@@ -8,14 +8,7 @@ namespace mafox
 {
     template <typename Matrix>
     HomogeneousMatrixEquation<Matrix>::HomogeneousMatrixEquation(const Matrix &matrix)
-    : matrix(matrix)
-    {
-        assert(matrix.is_square());
-    }
-
-    template <typename Matrix>
-    HomogeneousMatrixEquation<Matrix>::HomogeneousMatrixEquation(Matrix &&matrix)
-    : matrix(std::forward<Matrix>(matrix))
+    : matrix(matrix.share_ptr())
     {
         assert(matrix.is_square());
     }
@@ -25,9 +18,9 @@ namespace mafox
     auto HomogeneousMatrixEquation<Matrix>::operator=(const Vector &vector) const &&
         -> MatrixEquation<Matrix, Vector>
     {
-        assert(vector.dimension() == matrix.rows());
+        assert(vector.dimension() == matrix->rows());
 
-        return MatrixEquation<Matrix, Vector>(std::move(matrix), vector);
+        return MatrixEquation<Matrix, Vector>(matrix, vector.share_ptr());
     }
 }
 
