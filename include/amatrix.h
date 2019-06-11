@@ -9,7 +9,8 @@
 #include "size.h"
 #include "def.h"
 
-#define MAFOX_AMATRIX(MatrixHierarchyEnd) AMatrix<typename MatrixTraits<MatrixHierarchyEnd>::value_type, MatrixHierarchyEnd>
+#define MAFOX_AMATRIX(MatrixHierarchyEnd) \
+    mafox::AMatrix<typename mafox::MatrixTraits<mafox::detail::EvalHierarchyEnd<MatrixHierarchyEnd>>::value_type, mafox::detail::EvalHierarchyEnd<MatrixHierarchyEnd>>
 
 #define USING_MAFOX_MATRIX_TYPES(MatrixHierarchyEnd)                                                       \
     template <typename ___MAFOX_T>                                                                         \
@@ -27,32 +28,32 @@
 
 
 #define MAFOX_DEFAULT_MATRIX_TRAITS(user_matrix_t, value_t, user_data_t)   \
-    template <typename ___MAFOX_T>                                     \
-    using matrix_t            = user_matrix_t<___MAFOX_T>;             \
-    using data_t              = user_data_t;                           \
-    using shared_data_t       = std::shared_ptr<data_t>;               \
-    using const_shared_data_t = std::shared_ptr<const data_t>;         \
-    using difference_type     = std::ptrdiff_t;                        \
-    using value_type          = std::remove_cv_t<value_t>;             \
-    using pointer             = value_t *;                             \
-    using const_pointer       = const value_t *;                       \
-    using reference           = value_t &;                             \
+    template <typename ___MAFOX_T>                                         \
+    using matrix_t            = user_matrix_t<___MAFOX_T>;                 \
+    using data_t              = user_data_t;                               \
+    using shared_data_t       = std::shared_ptr<data_t>;                   \
+    using const_shared_data_t = std::shared_ptr<const data_t>;             \
+    using difference_type     = std::ptrdiff_t;                            \
+    using value_type          = std::remove_cv_t<value_t>;                 \
+    using pointer             = value_t *;                                 \
+    using const_pointer       = const value_t *;                           \
+    using reference           = value_t &;                                 \
     using const_reference     = const value_t &
 
-#define MAFOX_BASEMATRIX(this_t, value_t, base_t) base_t<value_t, this_t<value_t>>
+#define MAFOX_BASEMATRIXTRAITS(this_t, value_t, base_t) mafox::MatrixTraits<base_t<value_t, this_t<value_t>>>
 
-#define MAFOX_INHERIT_TRAITS(this_t, value_t, base_t)                                                    \
-    template <typename ___MAFOX_T>                                                                       \
-    using matrix_t            = this_t<___MAFOX_T>;                                                      \
-    using data_t              = typename MAFOX_BASEMATRIX(this_t, value_t, base_t)::data_t;              \
-    using shared_data_t       = typename MAFOX_BASEMATRIX(this_t, value_t, base_t)::shared_data_t;       \
-    using const_shared_data_t = typename MAFOX_BASEMATRIX(this_t, value_t, base_t)::const_shared_data_t; \
-    using difference_type     = typename MAFOX_BASEMATRIX(this_t, value_t, base_t)::difference_type;     \
-    using value_type          = typename MAFOX_BASEMATRIX(this_t, value_t, base_t)::value_type;          \
-    using pointer             = typename MAFOX_BASEMATRIX(this_t, value_t, base_t)::pointer;             \
-    using const_pointer       = typename MAFOX_BASEMATRIX(this_t, value_t, base_t)::const_pointer;       \
-    using reference           = typename MAFOX_BASEMATRIX(this_t, value_t, base_t)::reference;           \
-    using const_reference     = typename MAFOX_BASEMATRIX(this_t, value_t, base_t)::const_reference
+#define MAFOX_INHERIT_TRAITS(this_t, value_t, base_t)                                                          \
+    template <typename ___MAFOX_T>                                                                             \
+    using matrix_t            = this_t<___MAFOX_T>;                                                            \
+    using data_t              = typename MAFOX_BASEMATRIXTRAITS(this_t, value_t, base_t)::data_t;              \
+    using shared_data_t       = typename MAFOX_BASEMATRIXTRAITS(this_t, value_t, base_t)::shared_data_t;       \
+    using const_shared_data_t = typename MAFOX_BASEMATRIXTRAITS(this_t, value_t, base_t)::const_shared_data_t; \
+    using difference_type     = typename MAFOX_BASEMATRIXTRAITS(this_t, value_t, base_t)::difference_type;     \
+    using value_type          = typename MAFOX_BASEMATRIXTRAITS(this_t, value_t, base_t)::value_type;          \
+    using pointer             = typename MAFOX_BASEMATRIXTRAITS(this_t, value_t, base_t)::pointer;             \
+    using const_pointer       = typename MAFOX_BASEMATRIXTRAITS(this_t, value_t, base_t)::const_pointer;       \
+    using reference           = typename MAFOX_BASEMATRIXTRAITS(this_t, value_t, base_t)::reference;           \
+    using const_reference     = typename MAFOX_BASEMATRIXTRAITS(this_t, value_t, base_t)::const_reference
 
 namespace mafox
 {
@@ -73,7 +74,7 @@ namespace mafox
         BaseMatrix
         <
             typename MatrixTraits<DerivedMatrix>::value_type,
-            typename metaxxa::If<std::is_same_v<MatrixHierarchyEnd, This>>
+            typename metaxxa::If<std::is_same_v<MatrixHierarchyEnd, mafox::This>>
                 ::template Then<DerivedMatrix>
                 ::template Else<MatrixHierarchyEnd>
                 ::Type
@@ -136,5 +137,31 @@ namespace mafox
 
 template <typename T, typename MatrixHierarchyEnd>
 std::ostream &operator<<(std::ostream &, const mafox::AMatrix<T, MatrixHierarchyEnd> &);
+
+namespace mafox::detail
+{
+    template <typename _T, typename _MatrixHierarchyEnd>
+    struct MatrixInfoImpl
+    {
+        using T = _T;
+        using MatrixHierarchyEnd = _MatrixHierarchyEnd;
+    };
+
+    template <typename Matrix>
+    using MatrixInfo = metaxxa::MoveParameters<MatrixInfoImpl, Matrix>;
+
+    template <typename Matrix>
+    struct EvalHierarchyEndImpl
+    {
+        using Info = MatrixInfo<Matrix>;
+        using Type = typename metaxxa::If<std::is_same_v<typename Info::MatrixHierarchyEnd, mafox::This>>
+            ::template Then<Matrix>
+            ::template Else<typename Info::MatrixHierarchyEnd>
+            ::Type;
+    };
+
+    template <typename Matrix>
+    using EvalHierarchyEnd = typename EvalHierarchyEndImpl<Matrix>::Type;
+}
 
 #endif // MAFOX_AMATRIX_H

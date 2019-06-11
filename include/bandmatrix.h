@@ -23,7 +23,7 @@ namespace mafox
     class BandMatrix : public MatrixExtender<AMatrix, BandMatrix<T>, MatrixHierarchyEnd>
     {
     public:
-        USING_MAFOX_MATRIX_TYPES(BandMatrix<T>);
+        USING_MAFOX_MATRIX_TYPES(BandMatrix);
 
         BandMatrix(std::size_t size, std::size_t lower_bandwidth, std::size_t upper_bandwidth);
 
@@ -86,7 +86,7 @@ namespace mafox
 
         const_pointer upper_diagonal_cdata(std::size_t level) const;
 
-    private:
+    protected:
         virtual reference element(std::size_t i, std::size_t j) override;
 
         BandMatrix(shared_data_t);

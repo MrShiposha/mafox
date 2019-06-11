@@ -35,6 +35,8 @@ namespace mafox
         const_pointer upper_diagonal_cdata() const;
 
     protected:
+        friend base_matrix_t;
+
         TridiagonalMatrix(shared_data_t);
     };
 
