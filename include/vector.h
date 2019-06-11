@@ -1,40 +1,64 @@
 #ifndef MAFOX_VECTOR_H
 #define MAFOX_VECTOR_H
 
-// TODO remove
-#include "matrix.h"
-
 #include "avector.h"
-
-// TODO
 
 namespace mafox
 {
-    template <typename T>
+    template <typename T, typename MatrixHierarchyEnd = This>
     class Vector;
 
     template <typename T>
-    struct MatrixTraits<Vector<T>>
+    class vector_data_t;
+
+    template <typename T, typename MatrixHierarchyEnd>
+    struct MatrixTraits<Vector<T, MatrixHierarchyEnd>>
     {
-        using const_reference = const T &;
+        MAFOX_DEFAULT_VECTOR_TRAITS(Vector, T, vector_data_t<T>);
     };
 
-    template <typename T>
-    class Vector : public Matrix<T>, public AVector<Vector<T>>
+    template <typename T, typename MatrixHierarchyEnd>
+    class Vector : public MatrixExtender<AVector, Vector<T>, MatrixHierarchyEnd>
     {
     public:
-        using AVector<Vector<T>>::set_element;
-        using AVector<Vector<T>>::operator();
+        USING_MAFOX_VECTOR_TYPES(Vector);
 
-        using Matrix<T>::set_element;
-        using Matrix<T>::operator();
+        Vector(std::size_t dimension);
 
-        template <typename ___MAFOX_T>
-        using vector_t = Vector<___MAFOX_T>;
+        Vector(const Vector &);
 
-        Vector(std::size_t size)
-        : Matrix<T>(size, 1), AVector<Vector<T>>()
-        {}
+        Vector(Vector &&);
+
+        Vector() = delete;
+
+        virtual ~Vector() = default;
+
+        Vector &operator=(const Vector &);
+
+        Vector &operator=(Vector &&);
+
+        virtual std::size_t dimension() const override;
+
+        virtual reference element(std::size_t coordinate) override;
+
+        virtual const_reference element(std::size_t coordinate) const override;
+
+        virtual void set_element(std::size_t coordinate, const_reference value) override;
+
+        virtual std::shared_ptr<IMatrix<T>> share_interface() override;
+
+        virtual std::shared_ptr<const IMatrix<T>> share_interface() const override;
+
+        virtual shared_data_t shared_data() override;
+
+        virtual const_shared_data_t shared_cdata() const override;
+
+        virtual matrix_t<T> share() override;
+
+    protected:
+        Vector(shared_data_t);
+
+        shared_data_t m_data;
     };
 }
 

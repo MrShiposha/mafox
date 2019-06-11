@@ -43,7 +43,7 @@ namespace mafox
     template <typename T, typename MatrixHierarchyEnd>
     struct MatrixTraits<TridiagonalMatrix<T, MatrixHierarchyEnd>>
     {
-        MAFOX_INHERIT_TRAITS(TridiagonalMatrix, T, BandMatrix);
+        MAFOX_INHERIT_MATRIX_TRAITS(TridiagonalMatrix, T, BandMatrix);
     };
 }
 

@@ -42,7 +42,7 @@
 
 #define MAFOX_BASEMATRIXTRAITS(this_t, value_t, base_t) mafox::MatrixTraits<base_t<value_t, this_t<value_t>>>
 
-#define MAFOX_INHERIT_TRAITS(this_t, value_t, base_t)                                                          \
+#define MAFOX_INHERIT_MATRIX_TRAITS(this_t, value_t, base_t)                                                          \
     template <typename ___MAFOX_T>                                                                             \
     using matrix_t            = this_t<___MAFOX_T>;                                                            \
     using data_t              = typename MAFOX_BASEMATRIXTRAITS(this_t, value_t, base_t)::data_t;              \
