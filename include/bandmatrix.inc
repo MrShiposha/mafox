@@ -93,43 +93,43 @@ namespace mafox
         std::unique_ptr<std::unique_ptr<T[]>[]> arrays;
     };
 
-    template <typename T>
-    BandMatrix<T>::BandMatrix(std::size_t size, std::size_t lower_bandwidth, std::size_t upper_bandwidth)
+    template <typename T, typename MatrixHierarchyEnd>
+    BandMatrix<T, MatrixHierarchyEnd>::BandMatrix(std::size_t size, std::size_t lower_bandwidth, std::size_t upper_bandwidth)
     : m_data(band_matrix_data_t<T>::make(size, lower_bandwidth, upper_bandwidth))
     {
         assert(lower_bandwidth < size && upper_bandwidth < size);
     }
 
-    template <typename T>
-    BandMatrix<T>::BandMatrix(const BandMatrix &other)
+    template <typename T, typename MatrixHierarchyEnd>
+    BandMatrix<T, MatrixHierarchyEnd>::BandMatrix(const BandMatrix &other)
     : m_data(band_matrix_data_t<T>::make(*other.m_data))
     {}
 
-    template <typename T>
-    BandMatrix<T>::BandMatrix(BandMatrix &&other)
+    template <typename T, typename MatrixHierarchyEnd>
+    BandMatrix<T, MatrixHierarchyEnd>::BandMatrix(BandMatrix &&other)
     : m_data(std::move(other.m_data))
     {}
 
-    template <typename T>
-    BandMatrix<T>::BandMatrix(shared_data_t m_data)
+    template <typename T, typename MatrixHierarchyEnd>
+    BandMatrix<T, MatrixHierarchyEnd>::BandMatrix(shared_data_t m_data)
     : m_data(m_data)
     {}
 
-    template <typename T>
-    BandMatrix<T>::~BandMatrix()
+    template <typename T, typename MatrixHierarchyEnd>
+    BandMatrix<T, MatrixHierarchyEnd>::~BandMatrix()
     {}
 
-    template <typename T>
-    BandMatrix<T> &BandMatrix<T>::operator=(const BandMatrix &rhs)
+    template <typename T, typename MatrixHierarchyEnd>
+    BandMatrix<T, MatrixHierarchyEnd> &BandMatrix<T, MatrixHierarchyEnd>::operator=(const BandMatrix &rhs)
     {
         if(this != &rhs)
-            *this = std::move(BandMatrix<T>(rhs));
+            *this = std::move(BandMatrix<T, MatrixHierarchyEnd>(rhs));
 
         return *this;
     }
 
-    template <typename T>
-    BandMatrix<T> &BandMatrix<T>::operator=(BandMatrix &&rhs)
+    template <typename T, typename MatrixHierarchyEnd>
+    BandMatrix<T, MatrixHierarchyEnd> &BandMatrix<T, MatrixHierarchyEnd>::operator=(BandMatrix &&rhs)
     {
         if(this != &rhs)
         {
@@ -142,20 +142,20 @@ namespace mafox
         return *this;
     }
 
-    template <typename T>
-    std::size_t BandMatrix<T>::rows() const
+    template <typename T, typename MatrixHierarchyEnd>
+    std::size_t BandMatrix<T, MatrixHierarchyEnd>::rows() const
     {
         return m_data->size;
     }
 
-    template <typename T>
-    std::size_t BandMatrix<T>::cols() const
+    template <typename T, typename MatrixHierarchyEnd>
+    std::size_t BandMatrix<T, MatrixHierarchyEnd>::cols() const
     {
         return m_data->size;
     }
 
-    template <typename T>
-    typename BandMatrix<T>::reference BandMatrix<T>::element(std::size_t i, std::size_t j)
+    template <typename T, typename MatrixHierarchyEnd>
+    typename BandMatrix<T, MatrixHierarchyEnd>::reference BandMatrix<T, MatrixHierarchyEnd>::element(std::size_t i, std::size_t j)
     {
         assert(i < rows() && j < cols());
 
@@ -165,22 +165,22 @@ namespace mafox
             return m_data->at(i, j);
     }
 
-    template <typename T>
-    typename BandMatrix<T>::const_reference BandMatrix<T>::element(std::size_t i, std::size_t j) const
+    template <typename T, typename MatrixHierarchyEnd>
+    typename BandMatrix<T, MatrixHierarchyEnd>::const_reference BandMatrix<T, MatrixHierarchyEnd>::element(std::size_t i, std::size_t j) const
     {
         assert(i < rows() && j < cols());
 
         return m_data->c_at(i, j);
     }
 
-    template <typename T>
-    void BandMatrix<T>::set_element(std::size_t i, std::size_t j, const_reference value)
+    template <typename T, typename MatrixHierarchyEnd>
+    void BandMatrix<T, MatrixHierarchyEnd>::set_element(std::size_t i, std::size_t j, const_reference value)
     {
         assert(try_set_element(i, j, value));
     }
     
-    template <typename T>
-    bool BandMatrix<T>::try_set_element(std::size_t i, std::size_t j, const_reference value)
+    template <typename T, typename MatrixHierarchyEnd>
+    bool BandMatrix<T, MatrixHierarchyEnd>::try_set_element(std::size_t i, std::size_t j, const_reference value)
     {
         assert(i < rows() && j < cols());
 
@@ -193,8 +193,8 @@ namespace mafox
         }
     }
 
-    template <typename T>
-    void BandMatrix<T>::transpose()
+    template <typename T, typename MatrixHierarchyEnd>
+    void BandMatrix<T, MatrixHierarchyEnd>::transpose()
     {
         if(lower_bandwidth() == upper_bandwidth())
         {
@@ -204,7 +204,7 @@ namespace mafox
         }
         else
         {
-            BandMatrix<T> result(m_data->size, m_data->u, m_data->l);
+            BandMatrix<T, MatrixHierarchyEnd> result(m_data->size, m_data->u, m_data->l);
             
             for(std::size_t i = 0, sz = m_data->u+m_data->l; i <= sz; ++i)
                 result.m_data->arrays[i] = std::move(m_data->arrays[sz - i]);
@@ -213,17 +213,17 @@ namespace mafox
         }
     }
 
-    template <typename T>
-    BandMatrix<T> BandMatrix<T>::transposed()
+    template <typename T, typename MatrixHierarchyEnd>
+    typename BandMatrix<T, MatrixHierarchyEnd>::template matrix_t<T> BandMatrix<T, MatrixHierarchyEnd>::transposed()
     {
-        BandMatrix<T> result(*this);
+        BandMatrix<T, MatrixHierarchyEnd> result(*this);
         result.transpose();
 
-        return result;
+        return matrix_t<T>(std::move(result));
     }
 
-    template <typename T>
-    void BandMatrix<T>::transpose_rsd()
+    template <typename T, typename MatrixHierarchyEnd>
+    void BandMatrix<T, MatrixHierarchyEnd>::transpose_rsd()
     {
         long long i = -static_cast<long long>(m_data->l);
         long long u = static_cast<long long>(m_data->u);
@@ -233,95 +233,95 @@ namespace mafox
             std::reverse(m_data->arrays[col].get(), m_data->arrays[col].get() + m_data->size-std::abs(i));
     }
 
-    template <typename T>
-    BandMatrix<T> BandMatrix<T>::transposed_rsd()
+    template <typename T, typename MatrixHierarchyEnd>
+    typename BandMatrix<T, MatrixHierarchyEnd>::template matrix_t<T> BandMatrix<T, MatrixHierarchyEnd>::transposed_rsd()
     {
-        BandMatrix<T> result(*this);
+        BandMatrix<T, MatrixHierarchyEnd> result(*this);
         result.transpose_rsd();
 
-        return result;
+        return matrix_t<T>(std::move(result));
     }
 
-    template <typename T>
-    typename BandMatrix<T>::shared_data_t BandMatrix<T>::shared_data()
+    template <typename T, typename MatrixHierarchyEnd>
+    typename BandMatrix<T, MatrixHierarchyEnd>::shared_data_t BandMatrix<T, MatrixHierarchyEnd>::shared_data()
     {
         return m_data;
     }
 
-    template <typename T>
-    typename BandMatrix<T>::const_shared_data_t BandMatrix<T>::shared_cdata() const
+    template <typename T, typename MatrixHierarchyEnd>
+    typename BandMatrix<T, MatrixHierarchyEnd>::const_shared_data_t BandMatrix<T, MatrixHierarchyEnd>::shared_cdata() const
     {
         return m_data;
     }
 
-    template <typename T>
-    BandMatrix<T> BandMatrix<T>::share()
+    template <typename T, typename MatrixHierarchyEnd>
+    typename BandMatrix<T, MatrixHierarchyEnd>::template matrix_t<T> BandMatrix<T, MatrixHierarchyEnd>::share()
     {
-        return BandMatrix<T>(m_data);
+        return matrix_t<T>(m_data);
     }
 
-    template <typename T>
-    std::shared_ptr<IMatrix<T>> BandMatrix<T>::share_interface()
+    template <typename T, typename MatrixHierarchyEnd>
+    std::shared_ptr<IMatrix<T>> BandMatrix<T, MatrixHierarchyEnd>::share_interface()
     {
-        return std::shared_ptr<IMatrix<T>>(new BandMatrix<T>(m_data));
+        return std::shared_ptr<IMatrix<T>>(new BandMatrix<T, MatrixHierarchyEnd>(m_data));
     }
 
-    template <typename T>
-    std::shared_ptr<const IMatrix<T>> BandMatrix<T>::share_interface() const
+    template <typename T, typename MatrixHierarchyEnd>
+    std::shared_ptr<const IMatrix<T>> BandMatrix<T, MatrixHierarchyEnd>::share_interface() const
     {
-        return std::shared_ptr<const IMatrix<T>>(new BandMatrix<T>(m_data));
+        return std::shared_ptr<const IMatrix<T>>(new BandMatrix<T, MatrixHierarchyEnd>(m_data));
     }
 
-    template <typename T>
-    std::size_t BandMatrix<T>::lower_bandwidth() const
+    template <typename T, typename MatrixHierarchyEnd>
+    std::size_t BandMatrix<T, MatrixHierarchyEnd>::lower_bandwidth() const
     {
         return m_data->l;
     }
 
-    template <typename T>
-    std::size_t BandMatrix<T>::upper_bandwidth() const
+    template <typename T, typename MatrixHierarchyEnd>
+    std::size_t BandMatrix<T, MatrixHierarchyEnd>::upper_bandwidth() const
     {
         return m_data->u;
     }
 
-    template <typename T>
-    typename BandMatrix<T>::pointer BandMatrix<T>::diagonal_data()
+    template <typename T, typename MatrixHierarchyEnd>
+    typename BandMatrix<T, MatrixHierarchyEnd>::pointer BandMatrix<T, MatrixHierarchyEnd>::diagonal_data()
     {
         return m_data->arrays[m_data->l].get();
     }
 
-    template <typename T>
-    typename BandMatrix<T>::const_pointer BandMatrix<T>::diagonal_cdata() const
+    template <typename T, typename MatrixHierarchyEnd>
+    typename BandMatrix<T, MatrixHierarchyEnd>::const_pointer BandMatrix<T, MatrixHierarchyEnd>::diagonal_cdata() const
     {
-        return const_cast<BandMatrix<T>*>(this)->diagonal_data();
+        return const_cast<BandMatrix<T, MatrixHierarchyEnd>*>(this)->diagonal_data();
     }
 
-    template <typename T>
-    typename BandMatrix<T>::pointer BandMatrix<T>::lower_diagonal_data(std::size_t level)
+    template <typename T, typename MatrixHierarchyEnd>
+    typename BandMatrix<T, MatrixHierarchyEnd>::pointer BandMatrix<T, MatrixHierarchyEnd>::lower_diagonal_data(std::size_t level)
     {
         assert(level < lower_bandwidth());
 
         return m_data->arrays[m_data->l - (level + 1)].get();
     }
 
-    template <typename T>
-    typename BandMatrix<T>::const_pointer BandMatrix<T>::lower_diagonal_cdata(std::size_t level) const
+    template <typename T, typename MatrixHierarchyEnd>
+    typename BandMatrix<T, MatrixHierarchyEnd>::const_pointer BandMatrix<T, MatrixHierarchyEnd>::lower_diagonal_cdata(std::size_t level) const
     {
-        return const_cast<BandMatrix<T>*>(this)->lower_diagonal_data(level);
+        return const_cast<BandMatrix<T, MatrixHierarchyEnd>*>(this)->lower_diagonal_data(level);
     }
 
-    template <typename T>
-    typename BandMatrix<T>::pointer BandMatrix<T>::upper_diagonal_data(std::size_t level)
+    template <typename T, typename MatrixHierarchyEnd>
+    typename BandMatrix<T, MatrixHierarchyEnd>::pointer BandMatrix<T, MatrixHierarchyEnd>::upper_diagonal_data(std::size_t level)
     {
         assert(level < upper_bandwidth());
 
         return m_data->arrays[m_data->l + level + 1].get();
     }
 
-    template <typename T>
-    typename BandMatrix<T>::const_pointer BandMatrix<T>::upper_diagonal_cdata(std::size_t level) const
+    template <typename T, typename MatrixHierarchyEnd>
+    typename BandMatrix<T, MatrixHierarchyEnd>::const_pointer BandMatrix<T, MatrixHierarchyEnd>::upper_diagonal_cdata(std::size_t level) const
     {
-        return const_cast<BandMatrix<T>*>(this)->upper_diagonal_data(level);
+        return const_cast<BandMatrix<T, MatrixHierarchyEnd>*>(this)->upper_diagonal_data(level);
     }
 }
 

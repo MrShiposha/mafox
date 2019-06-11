@@ -10,17 +10,17 @@ namespace mafox
     template <typename T>
     class band_matrix_data_t;
 
-    template <typename T>
+    template <typename T, typename MatrixHierarchyEnd = This>
     class BandMatrix;
 
-    template <typename T>
-    struct MatrixTraits<BandMatrix<T>>
+    template <typename T, typename MatrixHierarchyEnd>
+    struct MatrixTraits<BandMatrix<T, MatrixHierarchyEnd>>
     {
         MAFOX_DEFAULT_MATRIX_TRAITS(BandMatrix, T, band_matrix_data_t<T>);
     };
 
-    template <typename T>
-    class BandMatrix : public AMatrix<BandMatrix<T>>
+    template <typename T, typename MatrixHierarchyEnd>
+    class BandMatrix : public MatrixExtender<AMatrix, BandMatrix<T>, MatrixHierarchyEnd>
     {
     public:
         USING_MAFOX_MATRIX_TYPES(BandMatrix);
@@ -54,17 +54,17 @@ namespace mafox
 
         virtual void transpose() override;
 
-        virtual BandMatrix<T> transposed() override;
+        virtual matrix_t<T> transposed() override;
 
         virtual void transpose_rsd() override;
 
-        virtual BandMatrix<T> transposed_rsd() override;
+        virtual matrix_t<T> transposed_rsd() override;
 
         virtual shared_data_t shared_data() override;
 
         virtual const_shared_data_t shared_cdata() const override;
 
-        virtual BandMatrix<T> share() override;
+        virtual matrix_t<T> share() override;
 
         virtual std::shared_ptr<IMatrix<T>> share_interface() override;
 

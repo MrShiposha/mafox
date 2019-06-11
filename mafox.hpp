@@ -8,9 +8,6 @@
 #include <iostream>
 #include <iomanip>
 #include <memory>
-#include <cstring>
-#include <cmath>
-#include <tuple>
 
 #ifndef MAFOX_H
 #define MAFOX_H
@@ -2019,6 +2016,8 @@ namespace mafox
     public:
         using std::runtime_error::runtime_error;
     };
+
+    struct This {};
 }
 
 #define MAFOX_FATAL(message) do { assert(false && message); throw mafox::FatalError(message); } while(0)
@@ -2143,19 +2142,22 @@ namespace mafox
 
 #endif // MAFOX_SIZE_H
 
-#define USING_MAFOX_MATRIX_TYPES(Matrix)                                                 \
-    template <typename ___MAFOX_T>                                                       \
-    using matrix_t            = typename AMatrix<Matrix>::template matrix_t<___MAFOX_T>; \
-    using data_t              = typename AMatrix<Matrix>::data_t;                        \
-    using shared_data_t       = typename AMatrix<Matrix>::shared_data_t;                 \
-    using const_shared_data_t = typename AMatrix<Matrix>::const_shared_data_t;           \
-    using difference_type_t   = typename AMatrix<Matrix>::difference_type;               \
-    using value_type          = typename AMatrix<Matrix>::value_type;                    \
-    using pointer             = typename AMatrix<Matrix>::pointer;                       \
-    using const_pointer       = typename AMatrix<Matrix>::const_pointer;                 \
-    using reference           = typename AMatrix<Matrix>::reference;                     \
-    using const_reference     = typename AMatrix<Matrix>::const_reference;               \
-    using Size                = typename AMatrix<Matrix>::Size
+#define MAFOX_AMATRIX(MatrixHierarchyEnd) AMatrix<typename MatrixTraits<MatrixHierarchyEnd>::value_type, MatrixHierarchyEnd>
+
+#define USING_MAFOX_MATRIX_TYPES(MatrixHierarchyEnd)                                                       \
+    template <typename ___MAFOX_T>                                                                         \
+    using matrix_t            = typename MAFOX_AMATRIX(MatrixHierarchyEnd)::template matrix_t<___MAFOX_T>; \
+    using data_t              = typename MAFOX_AMATRIX(MatrixHierarchyEnd)::data_t;                        \
+    using shared_data_t       = typename MAFOX_AMATRIX(MatrixHierarchyEnd)::shared_data_t;                 \
+    using const_shared_data_t = typename MAFOX_AMATRIX(MatrixHierarchyEnd)::const_shared_data_t;           \
+    using difference_type_t   = typename MAFOX_AMATRIX(MatrixHierarchyEnd)::difference_type;               \
+    using value_type          = typename MAFOX_AMATRIX(MatrixHierarchyEnd)::value_type;                    \
+    using pointer             = typename MAFOX_AMATRIX(MatrixHierarchyEnd)::pointer;                       \
+    using const_pointer       = typename MAFOX_AMATRIX(MatrixHierarchyEnd)::const_pointer;                 \
+    using reference           = typename MAFOX_AMATRIX(MatrixHierarchyEnd)::reference;                     \
+    using const_reference     = typename MAFOX_AMATRIX(MatrixHierarchyEnd)::const_reference;               \
+    using Size                = typename MAFOX_AMATRIX(MatrixHierarchyEnd)::Size
+
 
 #define MAFOX_DEFAULT_MATRIX_TRAITS(user_matrix_t, value_t, user_data_t)   \
         template <typename ___MAFOX_T>                                     \
@@ -2170,29 +2172,49 @@ namespace mafox
         using reference           = value_t &;                             \
         using const_reference     = const value_t &
 
-#define MAFOX_INHERIT_TRAITS(base_t)                                                \
-        template <typename ___MAFOX_T>                                              \
-        using matrix_t            = typename base_t::template matrix_t<___MAFOX_T>; \
-        using data_t              = typename base_t::data_t;                        \
-        using shared_data_t       = typename base_t::shared_data_t;                 \
-        using const_shared_data_t = typename base_t::const_shared_data_t;           \
-        using difference_type     = typename base_t::difference_type;               \
-        using value_type          = typename base_t::value_type;                    \
-        using pointer             = typename base_t::pointer;                       \
-        using const_pointer       = typename base_t::const_pointer;                 \
-        using reference           = typename base_t::reference;                     \
+#define MAFOX_INHERIT_TRAITS(this_t, base_t)                              \
+        template <typename ___MAFOX_T>                                    \
+        using matrix_t            = this_t<___MAFOX_T>;                   \
+        using data_t              = typename base_t::data_t;              \
+        using shared_data_t       = typename base_t::shared_data_t;       \
+        using const_shared_data_t = typename base_t::const_shared_data_t; \
+        using difference_type     = typename base_t::difference_type;     \
+        using value_type          = typename base_t::value_type;          \
+        using pointer             = typename base_t::pointer;             \
+        using const_pointer       = typename base_t::const_pointer;       \
+        using reference           = typename base_t::reference;           \
         using const_reference     = typename base_t::const_reference
 
 namespace mafox
 {
     template <typename Matrix>
     struct MatrixTraits;
+    
+    template 
+    <
+        template 
+        <
+            typename T, 
+            typename MatrixHierarchyEnd
+        > typename BaseMatrix,
+        typename DerivedMatrix,
+        typename MatrixHierarchyEnd
+    >
+    using MatrixExtender = 
+        BaseMatrix
+        <
+            typename MatrixTraits<DerivedMatrix>::value_type,
+            typename metaxxa::If<std::is_same_v<MatrixHierarchyEnd, This>>
+                ::template Then<DerivedMatrix>
+                ::template Else<MatrixHierarchyEnd>
+                ::Type
+        >;
 
-    template <typename Matrix>
-    class AMatrix : public IMatrix<typename MatrixTraits<Matrix>::value_type>
+    template <typename T, typename MatrixHierarchyEnd>
+    class AMatrix : public IMatrix<typename MatrixTraits<MatrixHierarchyEnd>::value_type>
     {
     public:
-        using Traits              = MatrixTraits<Matrix>;
+        using Traits              = MatrixTraits<MatrixHierarchyEnd>;
 
         template <typename ___MAFOX_T>
         using matrix_t            = typename Traits::template matrix_t<___MAFOX_T>;
@@ -2229,9 +2251,9 @@ namespace mafox
 
         mafox_inline const_reference operator()(std::size_t i, std::size_t j) const;
 
-        virtual Matrix transposed() = 0;
+        virtual matrix_t<T> transposed() = 0;
 
-        virtual Matrix transposed_rsd() = 0;
+        virtual matrix_t<T> transposed_rsd() = 0;
 
         virtual bool try_set_element(std::size_t i, std::size_t j, const_reference);
 
@@ -2239,46 +2261,46 @@ namespace mafox
 
         virtual const_shared_data_t shared_cdata() const = 0;
 
-        virtual Matrix share() = 0;
+        virtual matrix_t<T> share() = 0;
     };
 }
 
-template <typename T>
-std::ostream &operator<<(std::ostream &, const mafox::AMatrix<T> &);
+template <typename T, typename MatrixHierarchyEnd>
+std::ostream &operator<<(std::ostream &, const mafox::AMatrix<T, MatrixHierarchyEnd> &);
 
 #endif // MAFOX_AMATRIX_H
 
 namespace mafox
 {
-    template <typename Matrix>
-    typename AMatrix<Matrix>::Size AMatrix<Matrix>::size() const
+    template <typename Matrix, typename MatrixHierarchyEnd>
+    typename AMatrix<Matrix, MatrixHierarchyEnd>::Size AMatrix<Matrix, MatrixHierarchyEnd>::size() const
     {
         return Size { this->rows(), this->cols() };
     }
 
-    template <typename Matrix>
-    bool AMatrix<Matrix>::is_square() const
+    template <typename Matrix, typename MatrixHierarchyEnd>
+    bool AMatrix<Matrix, MatrixHierarchyEnd>::is_square() const
     {
         return this->rows() == this->cols();
     }
 
-    template <typename Matrix>
-    mafox_inline typename AMatrix<Matrix>::const_reference 
-    AMatrix<Matrix>::operator()(std::size_t i, std::size_t j) const
+    template <typename Matrix, typename MatrixHierarchyEnd>
+    mafox_inline typename AMatrix<Matrix, MatrixHierarchyEnd>::const_reference 
+    AMatrix<Matrix, MatrixHierarchyEnd>::operator()(std::size_t i, std::size_t j) const
     {
         return this->element(i, j);
     }
 
-    template <typename Matrix>
-    bool AMatrix<Matrix>::try_set_element(std::size_t i, std::size_t j, const_reference value)
+    template <typename Matrix, typename MatrixHierarchyEnd>
+    bool AMatrix<Matrix, MatrixHierarchyEnd>::try_set_element(std::size_t i, std::size_t j, const_reference value)
     {
         this->set_element(i, j, value);
         return true;
     }
 }
 
-template <typename T>
-std::ostream &operator<<(std::ostream &os, const mafox::AMatrix<T> &matrix)
+template <typename T, typename MatrixHierarchyEnd>
+std::ostream &operator<<(std::ostream &os, const mafox::AMatrix<T, MatrixHierarchyEnd> &matrix)
 {
     std::streamsize width = os.width();
     std::streamsize precision = os.precision();
@@ -2294,392 +2316,7 @@ std::ostream &operator<<(std::ostream &os, const mafox::AMatrix<T> &matrix)
 }
 
 #endif // MAFOX_AMATRIX_INC
-
-#ifndef MAFOX_MATRIX_INC
-#define MAFOX_MATRIX_INC
-
-
-
-#ifndef MAFOX_MATRIX_H
-#define MAFOX_MATRIX_H
-
-
-
-#ifndef MAFOX_MATRIXORDER_H
-#define MAFOX_MATRIXORDER_H
-
-namespace mafox
-{
-    enum MatrixOrder
-    {
-        ROW_MAJOR,
-        COL_MAJOR
-    };
-}
-
-#endif // MAFOX_MATRIXORDER_H
-
-namespace mafox
-{
-    template <typename T>
-    class matrix_data_t;
-
-    template <typename T>
-    class Matrix;
-
-    template <typename T>
-    struct MatrixTraits<Matrix<T>>
-    {
-        MAFOX_DEFAULT_MATRIX_TRAITS(Matrix, T, matrix_data_t<T>);
-    };
-
-    template <typename T>
-    class Matrix : public AMatrix<Matrix<T>>
-    {
-    public:
-        USING_MAFOX_MATRIX_TYPES(Matrix);
-
-        Matrix(std::size_t rows, std::size_t cols, MatrixOrder = MatrixOrder::ROW_MAJOR);
-
-        // template <typename Iterator>
-        // Matrix(Iterator begin, Iterator end);
-
-        // Matrix(std::initializer_list<std::initializer_list<T>>);
-
-        Matrix(const Matrix &);
-
-        Matrix(Matrix &&);
-
-        virtual ~Matrix();
-
-        Matrix &operator=(const Matrix &);
-
-        Matrix &operator=(Matrix &&);
-
-        mafox_inline virtual std::size_t rows() const override;
-
-        mafox_inline virtual std::size_t cols() const override;
-
-        virtual reference element(std::size_t i, std::size_t j) override;
-
-        virtual const_reference element(std::size_t i, std::size_t j) const override;
-
-        virtual void set_element(std::size_t i, std::size_t j, const_reference) override;
-
-        virtual void transpose() override;
-
-        virtual Matrix<T> transposed() override;
-
-        virtual void transpose_rsd() override;
-
-        virtual Matrix<T> transposed_rsd() override;
-
-        virtual shared_data_t shared_data() override;
-
-        virtual const_shared_data_t shared_cdata() const override;
-
-        virtual Matrix<T> share() override;
-
-        virtual std::shared_ptr<IMatrix<T>> share_interface() override;
-
-        virtual std::shared_ptr<const IMatrix<T>> share_interface() const override;
-
-        pointer data();
-
-        const_pointer cdata() const;
-
-        MatrixOrder order() const;
-
-        void set_order(MatrixOrder);
-
-    private:
-        Matrix(shared_data_t);
-
-        shared_data_t m_data;
-    };
-}
-
-#endif // MAFOX_MATRIX_H
-
-namespace mafox
-{
-    template <typename T>
-    class matrix_data_t
-    {
-        matrix_data_t(std::size_t rows, std::size_t cols, MatrixOrder order, std::unique_ptr<T[]> &&array)
-        : rows(rows), cols(cols), order(order), array(std::forward<std::unique_ptr<T[]>>(array))
-        {}
-
-        matrix_data_t(std::size_t rows, std::size_t cols, MatrixOrder order)
-        : rows(rows), cols(cols), order(order), array(new T[rows*cols])
-        {}
-        
-    public:
-        static auto make(std::size_t rows, std::size_t cols, MatrixOrder order, std::unique_ptr<T[]> &&array)
-        {
-            return std::shared_ptr<matrix_data_t<T>>
-            (
-                new matrix_data_t<T>
-                (
-                    rows, 
-                    cols, 
-                    order, 
-                    std::forward<std::unique_ptr<T[]>>(array)
-                )
-            );
-        }
-
-        static auto make(std::size_t rows, std::size_t cols, MatrixOrder order)
-        {
-            return std::shared_ptr<matrix_data_t<T>>
-            (
-                new matrix_data_t<T>
-                (
-                    rows, 
-                    cols, 
-                    order
-                )
-            );
-        }
-
-        // TODO: для resize и оператора присваивания обеспечить безопасность в многопоточной среде
-        // Важно, чтобы во время, например, транспонирования, умножения и проч. не происходило изменения размера матрицы.
-        // См. читатель-писатель 
-
-        std::size_t rows;
-        std::size_t cols;
-        MatrixOrder order;
-
-        std::unique_ptr<T[]> array; 
-    };
-
-    template <typename T>
-    Matrix<T>::Matrix(std::size_t rows, std::size_t cols, MatrixOrder order)
-    : m_data(matrix_data_t<T>::make(rows, cols, order))
-    {
-        std::size_t sz = rows * cols * sizeof(T);
-
-        zero_array(data(), sz);
-    }
-
-    // template <typename T>
-    // template <typename Iterator>
-    // Matrix<T>::Matrix(Iterator begin, Iterator end)
-    // {}
-
-    // template <typename T>
-    // Matrix<T>::Matrix(std::initializer_list<std::initializer_list<T>> list)
-    // {}
-
-    template <typename T>
-    Matrix<T>::Matrix(const Matrix &other)
-    : m_data(matrix_data_t<T>::make(other.rows(), other.cols(), other.order()))
-    {
-        memcpy(m_data->array.get(), other.m_data->array.get(), m_data->rows * m_data->cols * sizeof(T));
-    }
-
-    template <typename T>
-    Matrix<T>::Matrix(Matrix &&other)
-    : m_data(matrix_data_t<T>::make(other.rows(), other.cols(), other.order(), std::move(other.m_data->array)))
-    {}
-
-    template <typename T>
-    Matrix<T>::Matrix(shared_data_t m_data)
-    : m_data(m_data)
-    {}
-
-    template <typename T>
-    Matrix<T>::~Matrix()
-    {}
-
-    template <typename T>
-    Matrix<T> &Matrix<T>::operator=(const Matrix &rhs)
-    {
-        if(this != &rhs)
-            *this = std::move(Matrix<T>(rhs));
-        
-        return *this;
-    }
-
-    template <typename T>
-    Matrix<T> &Matrix<T>::operator=(Matrix &&rhs)
-    {
-        if(this != &rhs)
-        {
-            m_data->rows  = rhs.m_data->rows;
-            m_data->cols  = rhs.m_data->cols;
-            m_data->order = rhs.m_data->order;
-            m_data->array = std::move(rhs.m_data->array);
-        }
-        
-        return *this;
-    }
-
-    template <typename T>
-    mafox_inline std::size_t Matrix<T>::rows() const
-    {
-        return m_data->rows;
-    }
-
-    template <typename T>
-    mafox_inline std::size_t Matrix<T>::cols() const
-    {
-        return m_data->cols;
-    }
-
-    template <typename T>
-    typename Matrix<T>::reference Matrix<T>::element(std::size_t i, std::size_t j)
-    {
-        assert(i < rows() && j < cols());
-
-        if(order() == ROW_MAJOR)
-            return data()[i*cols() + j];
-        else if(order() == COL_MAJOR)
-            return data()[j*rows() + i];
-        else
-            MAFOX_FATAL("Unknown matrix order");
-    }
-
-    template <typename T>
-    typename Matrix<T>::const_reference Matrix<T>::element(std::size_t i, std::size_t j) const
-    {
-        return const_cast<Matrix<T>*>(this)->element(i, j);
-    }
-
-    template <typename T>
-    void Matrix<T>::set_element(std::size_t i, std::size_t j, const_reference value)
-    {
-        element(i, j) = value;
-    }
-
-    template <typename T>
-    void Matrix<T>::transpose()
-    {
-        if(this->is_square())
-        {
-            std::size_t sz = rows();
-            for(std::size_t i = 1, j = 0, diff = 0; i < sz; ++i)
-                for(j = i; j > 0; --j)
-                {
-                    diff = i-j;
-                    std::swap(element(i, diff), element(diff, i));
-                }
-
-            std::swap(m_data->rows, m_data->cols);        
-        }
-        else
-            *this = std::move(transposed());
-    }
-
-    template <typename T>
-    Matrix<T> Matrix<T>::transposed()
-    {
-        std::size_t r = rows(), c = cols();
-        Matrix<T> result(c, r);
-
-        for(std::size_t i = 0, j = 0; i < r; ++i)
-            for(j = 0; j < c; ++j)
-                result.set_element(j, i, element(i, j));
-
-        return result;
-    }
-
-    template <typename T>
-    void Matrix<T>::transpose_rsd()
-    {
-        if(this->is_square())
-        {
-            std::size_t sz = rows();
-            for(std::size_t i = 0, j = 0, diff = 0; i < sz; ++i)
-                for(diff = sz-i-1, j = diff; j > 0; --j)
-                {
-                    std::swap(element(diff-j, i), element(diff, i+j));
-                }
-
-            std::swap(m_data->rows, m_data->cols);        
-        }
-        else
-            *this = std::move(transposed_rsd());
-    }
-
-    template <typename T>
-    Matrix<T> Matrix<T>::transposed_rsd()
-    {
-        std::size_t r = rows(), c = cols();
-        Matrix<T> result(c, r);
-
-        for(std::size_t i = 0, j = 0; i < r; ++i)
-            for(j = 0; j < c; ++j)
-                result.set_element(c - j - 1, r - i - 1, element(i, j));
-
-        return result;
-    }
-
-    template <typename T>
-    typename Matrix<T>::shared_data_t Matrix<T>::shared_data()
-    {
-        return m_data;
-    }
-
-    template <typename T>
-    typename Matrix<T>::const_shared_data_t Matrix<T>::shared_cdata() const
-    {
-        return m_data;
-    }
-
-    template <typename T>
-    Matrix<T> Matrix<T>::share()
-    {
-        return Matrix<T>(m_data);
-    }
-
-    template <typename T>
-    std::shared_ptr<IMatrix<T>> Matrix<T>::share_interface()
-    {
-        return std::shared_ptr<Matrix<T>>(new Matrix<T>(m_data));
-    }
-
-    template <typename T>
-    std::shared_ptr<const IMatrix<T>> Matrix<T>::share_interface() const
-    {
-        return std::shared_ptr<Matrix<T>>(new Matrix<T>(m_data));
-    }
-
-    template <typename T>
-    typename Matrix<T>::pointer Matrix<T>::data()
-    {
-        return m_data->array.get();
-    }
-
-    template <typename T>
-    typename Matrix<T>::const_pointer Matrix<T>::cdata() const
-    {
-        return m_data->array.get();
-    }
-
-    template <typename T>
-    MatrixOrder Matrix<T>::order() const
-    {
-        return m_data->order;
-    }
-
-    template <typename T>
-    void Matrix<T>::set_order(MatrixOrder order)
-    {
-        if(m_data->order != order)
-        {
-            std::size_t r = rows(), c = cols();
-            Matrix<T> reordered(r, c, order);
-            for(std::size_t i = 0, j = 0; i < r; ++i)
-                for(j = 0; j < c; ++j)
-                    reordered.set_element(i, j, element(i, j));
-
-            *this = std::move(reordered);
-        }
-    }
-}
-
-#endif // MAFOX_MATRIX_INC
+// #include "matrix.inc"
 
 #ifndef MAFOX_BANDMATRIX_INC
 #define MAFOX_BANDMATRIX_INC
@@ -2695,17 +2332,17 @@ namespace mafox
     template <typename T>
     class band_matrix_data_t;
 
-    template <typename T>
+    template <typename T, typename MatrixHierarchyEnd = This>
     class BandMatrix;
 
-    template <typename T>
-    struct MatrixTraits<BandMatrix<T>>
+    template <typename T, typename MatrixHierarchyEnd>
+    struct MatrixTraits<BandMatrix<T, MatrixHierarchyEnd>>
     {
         MAFOX_DEFAULT_MATRIX_TRAITS(BandMatrix, T, band_matrix_data_t<T>);
     };
 
-    template <typename T>
-    class BandMatrix : public AMatrix<BandMatrix<T>>
+    template <typename T, typename MatrixHierarchyEnd>
+    class BandMatrix : public MatrixExtender<AMatrix, BandMatrix<T>, MatrixHierarchyEnd>
     {
     public:
         USING_MAFOX_MATRIX_TYPES(BandMatrix);
@@ -2739,17 +2376,17 @@ namespace mafox
 
         virtual void transpose() override;
 
-        virtual BandMatrix<T> transposed() override;
+        virtual matrix_t<T> transposed() override;
 
         virtual void transpose_rsd() override;
 
-        virtual BandMatrix<T> transposed_rsd() override;
+        virtual matrix_t<T> transposed_rsd() override;
 
         virtual shared_data_t shared_data() override;
 
         virtual const_shared_data_t shared_cdata() const override;
 
-        virtual BandMatrix<T> share() override;
+        virtual matrix_t<T> share() override;
 
         virtual std::shared_ptr<IMatrix<T>> share_interface() override;
 
@@ -2874,43 +2511,43 @@ namespace mafox
         std::unique_ptr<std::unique_ptr<T[]>[]> arrays;
     };
 
-    template <typename T>
-    BandMatrix<T>::BandMatrix(std::size_t size, std::size_t lower_bandwidth, std::size_t upper_bandwidth)
+    template <typename T, typename MatrixHierarchyEnd>
+    BandMatrix<T, MatrixHierarchyEnd>::BandMatrix(std::size_t size, std::size_t lower_bandwidth, std::size_t upper_bandwidth)
     : m_data(band_matrix_data_t<T>::make(size, lower_bandwidth, upper_bandwidth))
     {
         assert(lower_bandwidth < size && upper_bandwidth < size);
     }
 
-    template <typename T>
-    BandMatrix<T>::BandMatrix(const BandMatrix &other)
+    template <typename T, typename MatrixHierarchyEnd>
+    BandMatrix<T, MatrixHierarchyEnd>::BandMatrix(const BandMatrix &other)
     : m_data(band_matrix_data_t<T>::make(*other.m_data))
     {}
 
-    template <typename T>
-    BandMatrix<T>::BandMatrix(BandMatrix &&other)
+    template <typename T, typename MatrixHierarchyEnd>
+    BandMatrix<T, MatrixHierarchyEnd>::BandMatrix(BandMatrix &&other)
     : m_data(std::move(other.m_data))
     {}
 
-    template <typename T>
-    BandMatrix<T>::BandMatrix(shared_data_t m_data)
+    template <typename T, typename MatrixHierarchyEnd>
+    BandMatrix<T, MatrixHierarchyEnd>::BandMatrix(shared_data_t m_data)
     : m_data(m_data)
     {}
 
-    template <typename T>
-    BandMatrix<T>::~BandMatrix()
+    template <typename T, typename MatrixHierarchyEnd>
+    BandMatrix<T, MatrixHierarchyEnd>::~BandMatrix()
     {}
 
-    template <typename T>
-    BandMatrix<T> &BandMatrix<T>::operator=(const BandMatrix &rhs)
+    template <typename T, typename MatrixHierarchyEnd>
+    BandMatrix<T, MatrixHierarchyEnd> &BandMatrix<T, MatrixHierarchyEnd>::operator=(const BandMatrix &rhs)
     {
         if(this != &rhs)
-            *this = std::move(BandMatrix<T>(rhs));
+            *this = std::move(BandMatrix<T, MatrixHierarchyEnd>(rhs));
 
         return *this;
     }
 
-    template <typename T>
-    BandMatrix<T> &BandMatrix<T>::operator=(BandMatrix &&rhs)
+    template <typename T, typename MatrixHierarchyEnd>
+    BandMatrix<T, MatrixHierarchyEnd> &BandMatrix<T, MatrixHierarchyEnd>::operator=(BandMatrix &&rhs)
     {
         if(this != &rhs)
         {
@@ -2923,20 +2560,20 @@ namespace mafox
         return *this;
     }
 
-    template <typename T>
-    std::size_t BandMatrix<T>::rows() const
+    template <typename T, typename MatrixHierarchyEnd>
+    std::size_t BandMatrix<T, MatrixHierarchyEnd>::rows() const
     {
         return m_data->size;
     }
 
-    template <typename T>
-    std::size_t BandMatrix<T>::cols() const
+    template <typename T, typename MatrixHierarchyEnd>
+    std::size_t BandMatrix<T, MatrixHierarchyEnd>::cols() const
     {
         return m_data->size;
     }
 
-    template <typename T>
-    typename BandMatrix<T>::reference BandMatrix<T>::element(std::size_t i, std::size_t j)
+    template <typename T, typename MatrixHierarchyEnd>
+    typename BandMatrix<T, MatrixHierarchyEnd>::reference BandMatrix<T, MatrixHierarchyEnd>::element(std::size_t i, std::size_t j)
     {
         assert(i < rows() && j < cols());
 
@@ -2946,22 +2583,22 @@ namespace mafox
             return m_data->at(i, j);
     }
 
-    template <typename T>
-    typename BandMatrix<T>::const_reference BandMatrix<T>::element(std::size_t i, std::size_t j) const
+    template <typename T, typename MatrixHierarchyEnd>
+    typename BandMatrix<T, MatrixHierarchyEnd>::const_reference BandMatrix<T, MatrixHierarchyEnd>::element(std::size_t i, std::size_t j) const
     {
         assert(i < rows() && j < cols());
 
         return m_data->c_at(i, j);
     }
 
-    template <typename T>
-    void BandMatrix<T>::set_element(std::size_t i, std::size_t j, const_reference value)
+    template <typename T, typename MatrixHierarchyEnd>
+    void BandMatrix<T, MatrixHierarchyEnd>::set_element(std::size_t i, std::size_t j, const_reference value)
     {
         assert(try_set_element(i, j, value));
     }
     
-    template <typename T>
-    bool BandMatrix<T>::try_set_element(std::size_t i, std::size_t j, const_reference value)
+    template <typename T, typename MatrixHierarchyEnd>
+    bool BandMatrix<T, MatrixHierarchyEnd>::try_set_element(std::size_t i, std::size_t j, const_reference value)
     {
         assert(i < rows() && j < cols());
 
@@ -2974,8 +2611,8 @@ namespace mafox
         }
     }
 
-    template <typename T>
-    void BandMatrix<T>::transpose()
+    template <typename T, typename MatrixHierarchyEnd>
+    void BandMatrix<T, MatrixHierarchyEnd>::transpose()
     {
         if(lower_bandwidth() == upper_bandwidth())
         {
@@ -2985,7 +2622,7 @@ namespace mafox
         }
         else
         {
-            BandMatrix<T> result(m_data->size, m_data->u, m_data->l);
+            BandMatrix<T, MatrixHierarchyEnd> result(m_data->size, m_data->u, m_data->l);
             
             for(std::size_t i = 0, sz = m_data->u+m_data->l; i <= sz; ++i)
                 result.m_data->arrays[i] = std::move(m_data->arrays[sz - i]);
@@ -2994,17 +2631,17 @@ namespace mafox
         }
     }
 
-    template <typename T>
-    BandMatrix<T> BandMatrix<T>::transposed()
+    template <typename T, typename MatrixHierarchyEnd>
+    typename BandMatrix<T, MatrixHierarchyEnd>::template matrix_t<T> BandMatrix<T, MatrixHierarchyEnd>::transposed()
     {
-        BandMatrix<T> result(*this);
+        BandMatrix<T, MatrixHierarchyEnd> result(*this);
         result.transpose();
 
-        return result;
+        return matrix_t<T>(std::move(result));
     }
 
-    template <typename T>
-    void BandMatrix<T>::transpose_rsd()
+    template <typename T, typename MatrixHierarchyEnd>
+    void BandMatrix<T, MatrixHierarchyEnd>::transpose_rsd()
     {
         long long i = -static_cast<long long>(m_data->l);
         long long u = static_cast<long long>(m_data->u);
@@ -3014,930 +2651,110 @@ namespace mafox
             std::reverse(m_data->arrays[col].get(), m_data->arrays[col].get() + m_data->size-std::abs(i));
     }
 
-    template <typename T>
-    BandMatrix<T> BandMatrix<T>::transposed_rsd()
+    template <typename T, typename MatrixHierarchyEnd>
+    typename BandMatrix<T, MatrixHierarchyEnd>::template matrix_t<T> BandMatrix<T, MatrixHierarchyEnd>::transposed_rsd()
     {
-        BandMatrix<T> result(*this);
+        BandMatrix<T, MatrixHierarchyEnd> result(*this);
         result.transpose_rsd();
 
-        return result;
+        return matrix_t<T>(std::move(result));
     }
 
-    template <typename T>
-    typename BandMatrix<T>::shared_data_t BandMatrix<T>::shared_data()
+    template <typename T, typename MatrixHierarchyEnd>
+    typename BandMatrix<T, MatrixHierarchyEnd>::shared_data_t BandMatrix<T, MatrixHierarchyEnd>::shared_data()
     {
         return m_data;
     }
 
-    template <typename T>
-    typename BandMatrix<T>::const_shared_data_t BandMatrix<T>::shared_cdata() const
+    template <typename T, typename MatrixHierarchyEnd>
+    typename BandMatrix<T, MatrixHierarchyEnd>::const_shared_data_t BandMatrix<T, MatrixHierarchyEnd>::shared_cdata() const
     {
         return m_data;
     }
 
-    template <typename T>
-    BandMatrix<T> BandMatrix<T>::share()
+    template <typename T, typename MatrixHierarchyEnd>
+    typename BandMatrix<T, MatrixHierarchyEnd>::template matrix_t<T> BandMatrix<T, MatrixHierarchyEnd>::share()
     {
-        return BandMatrix<T>(m_data);
+        return matrix_t<T>(m_data);
     }
 
-    template <typename T>
-    std::shared_ptr<IMatrix<T>> BandMatrix<T>::share_interface()
+    template <typename T, typename MatrixHierarchyEnd>
+    std::shared_ptr<IMatrix<T>> BandMatrix<T, MatrixHierarchyEnd>::share_interface()
     {
-        return std::shared_ptr<IMatrix<T>>(new BandMatrix<T>(m_data));
+        return std::shared_ptr<IMatrix<T>>(new BandMatrix<T, MatrixHierarchyEnd>(m_data));
     }
 
-    template <typename T>
-    std::shared_ptr<const IMatrix<T>> BandMatrix<T>::share_interface() const
+    template <typename T, typename MatrixHierarchyEnd>
+    std::shared_ptr<const IMatrix<T>> BandMatrix<T, MatrixHierarchyEnd>::share_interface() const
     {
-        return std::shared_ptr<const IMatrix<T>>(new BandMatrix<T>(m_data));
+        return std::shared_ptr<const IMatrix<T>>(new BandMatrix<T, MatrixHierarchyEnd>(m_data));
     }
 
-    template <typename T>
-    std::size_t BandMatrix<T>::lower_bandwidth() const
+    template <typename T, typename MatrixHierarchyEnd>
+    std::size_t BandMatrix<T, MatrixHierarchyEnd>::lower_bandwidth() const
     {
         return m_data->l;
     }
 
-    template <typename T>
-    std::size_t BandMatrix<T>::upper_bandwidth() const
+    template <typename T, typename MatrixHierarchyEnd>
+    std::size_t BandMatrix<T, MatrixHierarchyEnd>::upper_bandwidth() const
     {
         return m_data->u;
     }
 
-    template <typename T>
-    typename BandMatrix<T>::pointer BandMatrix<T>::diagonal_data()
+    template <typename T, typename MatrixHierarchyEnd>
+    typename BandMatrix<T, MatrixHierarchyEnd>::pointer BandMatrix<T, MatrixHierarchyEnd>::diagonal_data()
     {
         return m_data->arrays[m_data->l].get();
     }
 
-    template <typename T>
-    typename BandMatrix<T>::const_pointer BandMatrix<T>::diagonal_cdata() const
+    template <typename T, typename MatrixHierarchyEnd>
+    typename BandMatrix<T, MatrixHierarchyEnd>::const_pointer BandMatrix<T, MatrixHierarchyEnd>::diagonal_cdata() const
     {
-        return const_cast<BandMatrix<T>*>(this)->diagonal_data();
+        return const_cast<BandMatrix<T, MatrixHierarchyEnd>*>(this)->diagonal_data();
     }
 
-    template <typename T>
-    typename BandMatrix<T>::pointer BandMatrix<T>::lower_diagonal_data(std::size_t level)
+    template <typename T, typename MatrixHierarchyEnd>
+    typename BandMatrix<T, MatrixHierarchyEnd>::pointer BandMatrix<T, MatrixHierarchyEnd>::lower_diagonal_data(std::size_t level)
     {
         assert(level < lower_bandwidth());
 
         return m_data->arrays[m_data->l - (level + 1)].get();
     }
 
-    template <typename T>
-    typename BandMatrix<T>::const_pointer BandMatrix<T>::lower_diagonal_cdata(std::size_t level) const
+    template <typename T, typename MatrixHierarchyEnd>
+    typename BandMatrix<T, MatrixHierarchyEnd>::const_pointer BandMatrix<T, MatrixHierarchyEnd>::lower_diagonal_cdata(std::size_t level) const
     {
-        return const_cast<BandMatrix<T>*>(this)->lower_diagonal_data(level);
+        return const_cast<BandMatrix<T, MatrixHierarchyEnd>*>(this)->lower_diagonal_data(level);
     }
 
-    template <typename T>
-    typename BandMatrix<T>::pointer BandMatrix<T>::upper_diagonal_data(std::size_t level)
+    template <typename T, typename MatrixHierarchyEnd>
+    typename BandMatrix<T, MatrixHierarchyEnd>::pointer BandMatrix<T, MatrixHierarchyEnd>::upper_diagonal_data(std::size_t level)
     {
         assert(level < upper_bandwidth());
 
         return m_data->arrays[m_data->l + level + 1].get();
     }
 
-    template <typename T>
-    typename BandMatrix<T>::const_pointer BandMatrix<T>::upper_diagonal_cdata(std::size_t level) const
+    template <typename T, typename MatrixHierarchyEnd>
+    typename BandMatrix<T, MatrixHierarchyEnd>::const_pointer BandMatrix<T, MatrixHierarchyEnd>::upper_diagonal_cdata(std::size_t level) const
     {
-        return const_cast<BandMatrix<T>*>(this)->upper_diagonal_data(level);
+        return const_cast<BandMatrix<T, MatrixHierarchyEnd>*>(this)->upper_diagonal_data(level);
     }
 }
 
 #endif // MAFOX_BANDMATRIX_INC
+// #include "tridiagonalmatrix.inc"
 
-#ifndef MAFOX_TRIDIAGONALMATRIX_INC
-#define MAFOX_TRIDIAGONALMATRIX_INC
+// #include "avector.h"
+// #include "vector.h"
 
+// #include "fdm.h"
 
-#ifndef MAFOX_TRIDIAGONALMATRIX_H
-#define MAFOX_TRIDIAGONALMATRIX_H
-
-
-namespace mafox
-{
-    template <typename T>
-    class TridiagonalMatrix : public BandMatrix<T>
-    {
-    public:
-        USING_MAFOX_MATRIX_TYPES(BandMatrix<T>);
-
-        TridiagonalMatrix(std::size_t size);
-
-        TridiagonalMatrix(const TridiagonalMatrix &) = default;
-
-        TridiagonalMatrix(TridiagonalMatrix &&) = default;
-
-        virtual ~TridiagonalMatrix() = default;
-
-        TridiagonalMatrix &operator=(const TridiagonalMatrix &) = default;
-
-        TridiagonalMatrix &operator=(TridiagonalMatrix &&) = default;
-
-        pointer lower_diagonal_data();
-
-        const_pointer lower_diagonal_cdata() const;
-
-        pointer upper_diagonal_data();
-
-        const_pointer upper_diagonal_cdata() const;
-    };
-
-    template <typename T>
-    struct MatrixTraits<TridiagonalMatrix<T>>
-    {
-        MAFOX_INHERIT_TRAITS(BandMatrix<T>);
-    };
-}
-
-#endif // MAFOX_TRIDIAGONALMATRIX_H
-
-namespace mafox
-{
-    template <typename T>
-    TridiagonalMatrix<T>::TridiagonalMatrix(std::size_t size)
-    : BandMatrix<T>(size, 1, 1)
-    {}
-
-    template <typename T>
-    typename TridiagonalMatrix<T>::pointer TridiagonalMatrix<T>::lower_diagonal_data()
-    {
-        return BandMatrix<T>::lower_diagonal_data(0);
-    }
-
-    template <typename T>
-    typename TridiagonalMatrix<T>::const_pointer TridiagonalMatrix<T>::lower_diagonal_cdata() const
-    {
-        return BandMatrix<T>::lower_diagonal_cdata(0);
-    }
-
-    template <typename T>
-    typename TridiagonalMatrix<T>::pointer TridiagonalMatrix<T>::upper_diagonal_data()
-    {
-        return BandMatrix<T>::upper_diagonal_data(0);
-    }
-
-    template <typename T>
-    typename TridiagonalMatrix<T>::const_pointer TridiagonalMatrix<T>::upper_diagonal_cdata() const
-    {
-        return BandMatrix<T>::upper_diagonal_cdata(0);
-    }
-}
-
-#endif // MAFOX_TRIDIAGONALMATRIX_INC
-
-
-#ifndef MAFOX_AVECTOR_H
-#define MAFOX_AVECTOR_H
-
-// TODO VectorTraits (typename template vector_t)
-
-
-namespace mafox
-{
-    struct VectorTag
-    {
-        virtual ~VectorTag() = default;
-    };
-
-    template <typename Vector>
-    class AVector : public VectorTag // TODO : public AMatrix<AVector<Vector>>
-    {
-    public:
-        std::size_t dimension() const
-        {
-            return static_cast<const Vector *>(this)->rows();
-        }
-
-        const auto &operator()(std::size_t i) const
-        {
-            return (*static_cast<const Vector *>(this))(i, 0);
-        }
-
-        void set_element(std::size_t i, typename MatrixTraits<Vector>::const_reference value)
-        {
-            static_cast<Vector *>(this)->set_element(i, 0, value);
-        }
-    };
-}
-
-#endif // MAFOX_AVECTOR_H
-
-#ifndef MAFOX_VECTOR_H
-#define MAFOX_VECTOR_H
-
-// TODO remove
-
-
-// TODO
-
-namespace mafox
-{
-    template <typename T>
-    class Vector;
-
-    template <typename T>
-    struct MatrixTraits<Vector<T>>
-    {
-        using const_reference = const T &;
-    };
-
-    template <typename T>
-    class Vector : public Matrix<T>, public AVector<Vector<T>>
-    {
-    public:
-        using AVector<Vector<T>>::set_element;
-        using AVector<Vector<T>>::operator();
-
-        using Matrix<T>::set_element;
-        using Matrix<T>::operator();
-
-        template <typename ___MAFOX_T>
-        using vector_t = Vector<___MAFOX_T>;
-
-        Vector(std::size_t size)
-        : Matrix<T>(size, 1), AVector<Vector<T>>()
-        {}
-    };
-}
-
-#endif // MAFOX_VECTOR_H
-
-
-#ifndef MAFOX_FDMMATRIX_INC
-#define MAFOX_FDMMATRIX_INC
-
-
-
-#ifndef MAFOX_FDMMATRIX_H
-#define MAFOX_FDMMATRIX_H
-
-
-
-namespace mafox
-{
-    namespace detail
-    {
-        enum class FDMCoeff
-        {
-            A, B, C
-        };
-
-        template <FDMCoeff COEFF, typename Callable>
-        struct FDMCoeffGenerator
-        {
-            static constexpr FDMCoeff COEFFICIENT = COEFF;
-
-            FDMCoeffGenerator(const Callable &callable);
-
-            template <typename... Args>
-            auto operator()(const Args &... args);
-
-            template <typename... Args>
-            auto operator()(const Args &... args) const;
-
-            Callable generate;
-        };
-
-        template <typename T, typename... Generators>
-        class FDMMatrixBuilder;
-
-        template <bool HAS_A, typename T, typename... Generators>
-        class FDMMatrixBuilderACoeff
-        {
-            using SelfType = FDMMatrixBuilder<T, Generators...>;
-        public:
-            template <typename Callable>
-            auto a_coeff(const Callable &)
-                -> FDMMatrixBuilder<T, Generators..., FDMCoeffGenerator<FDMCoeff::A, Callable>>;
-        };
-
-        template <typename T, typename... Generators>
-        class FDMMatrixBuilderACoeff<true, T, Generators...>
-        {};
-
-        template <bool HAS_B, typename T, typename... Generators>
-        class FDMMatrixBuilderBCoeff
-        {
-            using SelfType = FDMMatrixBuilder<T, Generators...>;
-        public:
-            template <typename Callable>
-            auto b_coeff(const Callable &)
-                -> FDMMatrixBuilder<T, Generators..., FDMCoeffGenerator<FDMCoeff::B, Callable>>;
-        };
-
-        template <typename T, typename... Generators>
-        class FDMMatrixBuilderBCoeff<true, T, Generators...>
-        {};
-
-        template <bool HAS_C, typename T, typename... Generators>
-        class FDMMatrixBuilderCCoeff
-        {
-            using SelfType = FDMMatrixBuilder<T, Generators...>;
-        public:
-            template <typename Callable>
-            auto c_coeff(const Callable &)
-                -> FDMMatrixBuilder<T, Generators..., FDMCoeffGenerator<FDMCoeff::C, Callable>>;
-        };
-
-        template <typename T, typename... Generators>
-        class FDMMatrixBuilderCCoeff<true, T, Generators...>
-        {};
-
-        template <bool IS_COMPLETED, typename Builder>
-        class FDMMatrixBuilderComputeMethod
-        {
-        public:
-            auto compute();
-        };
-
-        template <typename Builder>
-        class FDMMatrixBuilderComputeMethod<false, Builder>
-        {};
-
-        template <FDMCoeff COEFF, typename... Generators>
-        constexpr bool has_coeff()
-        {
-            return (false || ... || (Generators::COEFFICIENT == COEFF));
-        }
-
-        template <typename... Generators>
-        constexpr bool is_completed()
-        {
-            return has_coeff<FDMCoeff::A, Generators...>()
-                && has_coeff<FDMCoeff::B, Generators...>()
-                && has_coeff<FDMCoeff::C, Generators...>();
-        }
-
-        template <typename T, typename... Generators>
-        class FDMMatrixBuilder :
-            public FDMMatrixBuilderACoeff<has_coeff<FDMCoeff::A, Generators...>(), T, Generators...>,
-            public FDMMatrixBuilderBCoeff<has_coeff<FDMCoeff::B, Generators...>(), T, Generators...>,
-            public FDMMatrixBuilderCCoeff<has_coeff<FDMCoeff::C, Generators...>(), T, Generators...>,
-            public FDMMatrixBuilderComputeMethod<is_completed<Generators...>(), FDMMatrixBuilder<T, Generators...>>
-        {
-        public:
-            using value_type = T;
-
-            FDMMatrixBuilder(const T &begin, const T &end, const T &step, std::tuple<Generators...> &&generators)
-            : begin(begin), end(end), step(step), generators(std::forward<std::tuple<Generators...>>(generators))
-            {}
-
-        private:
-            friend class FDMMatrixBuilderACoeff<has_coeff<FDMCoeff::A, Generators...>(), T, Generators...>;
-            friend class FDMMatrixBuilderBCoeff<has_coeff<FDMCoeff::B, Generators...>(), T, Generators...>;
-            friend class FDMMatrixBuilderCCoeff<has_coeff<FDMCoeff::C, Generators...>(), T, Generators...>;
-            friend class FDMMatrixBuilderComputeMethod<is_completed<Generators...>(), FDMMatrixBuilder<T, Generators...>>;
-
-            T begin, end, step;
-            std::tuple<Generators...> generators;
-        };
-    }
-
-    template <typename T>
-    class FDMMatrixBorders
-    {
-    public:
-        FDMMatrixBorders(const T &begin, const T &end, const T &step)
-        : begin(begin), end(end), step(step)
-        {}
-
-        FDMMatrixBorders(const FDMMatrixBorders &) = default;
-
-        FDMMatrixBorders(FDMMatrixBorders &&) = default;
-
-        ~FDMMatrixBorders() = default;
-
-        FDMMatrixBorders &operator=(const FDMMatrixBorders &) = default;
-
-        FDMMatrixBorders &operator=(FDMMatrixBorders &&) = default;
-
-        template <typename Callable>
-        auto a_coeff(const Callable &) const
-            -> detail::FDMMatrixBuilder
-            <
-                T,
-                detail::FDMCoeffGenerator<detail::FDMCoeff::A, Callable>
-            >;
-
-        template <typename Callable>
-        auto b_coeff(const Callable &) const
-            -> detail::FDMMatrixBuilder
-            <
-                T,
-                detail::FDMCoeffGenerator<detail::FDMCoeff::B, Callable>
-            >;
-
-        template <typename Callable>
-        auto c_coeff(const Callable &) const
-            -> detail::FDMMatrixBuilder
-            <
-                T,
-                detail::FDMCoeffGenerator<detail::FDMCoeff::C, Callable>
-            >;
-
-    private:
-        T begin, end, step;
-    };
-
-
-    template <typename T>
-    FDMMatrixBorders<T> fdm_matrix(const T &start, const T &end, const T &step);
-}
-
-#endif // MAFOX_FDMMATRIX_H
-
-namespace mafox
-{
-    namespace detail
-    {
-        template <FDMCoeff COEFF>
-        struct IsCoeff
-        {
-            template <typename T>
-            struct Checker
-            {
-                static constexpr bool value = (T::COEFFICIENT == COEFF);
-            };
-        };
-
-        template <FDMCoeff COEFF, typename Callable>
-        FDMCoeffGenerator<COEFF, Callable>::FDMCoeffGenerator(const Callable &callable)
-        : generate(callable)
-        {}
-
-        template <FDMCoeff COEFF, typename Callable>
-        template <typename... Args>
-        auto FDMCoeffGenerator<COEFF, Callable>::operator()(const Args &... args)
-        {
-            return generate(args...);
-        }
-
-        template <FDMCoeff COEFF, typename Callable>
-        template <typename... Args>
-        auto FDMCoeffGenerator<COEFF, Callable>::operator()(const Args &... args) const
-        {
-            return generate(args...);
-        }
-
-        template <bool HAS_A, typename T, typename... Generators>
-        template <typename Callable>
-        auto FDMMatrixBuilderACoeff<HAS_A, T, Generators...>::a_coeff(const Callable &generator)
-            -> FDMMatrixBuilder<T, Generators..., FDMCoeffGenerator<FDMCoeff::A, Callable>>
-        {
-            auto *self = static_cast<SelfType *>(this);
-
-            return FDMMatrixBuilder<T, Generators..., FDMCoeffGenerator<FDMCoeff::A, Callable>>
-            (
-                self->begin,
-                self->end,
-                self->step,
-                std::tuple_cat
-                (
-                    self->generators, 
-                    std::make_tuple(FDMCoeffGenerator<FDMCoeff::A, Callable>(generator))
-                )
-            );
-        }
-
-        template <bool HAS_B, typename T, typename... Generators>
-        template <typename Callable>
-        auto FDMMatrixBuilderBCoeff<HAS_B, T, Generators...>::b_coeff(const Callable &generator)
-            -> FDMMatrixBuilder<T, Generators..., FDMCoeffGenerator<FDMCoeff::B, Callable>>
-        {
-            auto *self = static_cast<SelfType *>(this);
-
-            return FDMMatrixBuilder<T, Generators..., FDMCoeffGenerator<FDMCoeff::B, Callable>>
-            (
-                self->begin,
-                self->end,
-                self->step,
-                std::tuple_cat
-                (
-                    self->generators, 
-                    std::make_tuple(FDMCoeffGenerator<FDMCoeff::B, Callable>(generator))
-                )
-            );
-        }
-
-        template <bool HAS_C, typename T, typename... Generators>
-        template <typename Callable>
-        auto FDMMatrixBuilderCCoeff<HAS_C, T, Generators...>::c_coeff(const Callable &generator)
-            -> FDMMatrixBuilder<T, Generators..., FDMCoeffGenerator<FDMCoeff::C, Callable>>
-        {
-            auto *self = static_cast<SelfType *>(this);
-
-            return FDMMatrixBuilder<T, Generators..., FDMCoeffGenerator<FDMCoeff::C, Callable>>
-            (
-                self->begin,
-                self->end,
-                self->step,
-                std::tuple_cat
-                (
-                    self->generators, 
-                    std::make_tuple(FDMCoeffGenerator<FDMCoeff::C, Callable>(generator))
-                )
-            );
-        }
-
-        template <bool IS_COMPLETED, typename Builder>
-        auto FDMMatrixBuilderComputeMethod<IS_COMPLETED, Builder>::compute()
-        {
-            auto *self = static_cast<Builder*>(this);
-
-            using Generators = decltype(self->generators);
-            using T = typename Builder::value_type;
-            using FindA = metaxxa::Find<Generators, IsCoeff<FDMCoeff::A>::template Checker>;
-            using FindB = metaxxa::Find<Generators, IsCoeff<FDMCoeff::B>::template Checker>;
-            using FindC = metaxxa::Find<Generators, IsCoeff<FDMCoeff::C>::template Checker>;
-
-            constexpr std::size_t A_INDEX = FindA::INDEX;
-            constexpr std::size_t B_INDEX = FindB::INDEX;
-            constexpr std::size_t C_INDEX = FindC::INDEX;
-
-            auto &gen_a = std::get<A_INDEX>(self->generators);
-            auto &gen_b = std::get<B_INDEX>(self->generators);
-            auto &gen_c = std::get<C_INDEX>(self->generators);
-
-            using R = std::common_type_t
-            <
-                std::invoke_result_t<typename FindA::Type, T>,
-                std::invoke_result_t<typename FindB::Type, T>,
-                std::invoke_result_t<typename FindC::Type, T>
-            >;
-
-            std::size_t result_size = static_cast<std::size_t>(std::round((self->end - self->begin) / self->step));
-
-            if(result_size < 3)
-                MAFOX_FATAL("Unable to create a finite difference matrix with less than 3 cells");
-
-            TridiagonalMatrix<R> result(result_size);
-
-            T x = self->begin;
-            T h = self->step;
-
-            auto *main_diagonal = result.diagonal_data();
-            auto *upper_diagonal = result.upper_diagonal_data();
-            auto *lower_diagonal = result.lower_diagonal_data();
-
-            upper_diagonal[0] = gen_c(x);
-            main_diagonal[0] = gen_b(x);
-
-            x += h;
-            --result_size;
-
-            std::size_t i = 1;
-            for(; i < result_size; ++i, x += h)
-            {
-                upper_diagonal[i]   = gen_c(x);
-                main_diagonal[i]    = gen_b(x);
-                lower_diagonal[i-1] = gen_a(x);
-            }
-
-            main_diagonal[i]    = gen_b(x);
-            lower_diagonal[i-1] = gen_a(x);
-
-            return result;
-        }
-    }
-
-    template <typename T>
-    template <typename Callable>
-    auto FDMMatrixBorders<T>::a_coeff(const Callable &gen) const
-        -> detail::FDMMatrixBuilder
-            <
-                T,
-                detail::FDMCoeffGenerator<detail::FDMCoeff::A, Callable>
-            >
-    {
-        return detail::FDMMatrixBuilder
-        <
-            T,
-            detail::FDMCoeffGenerator<detail::FDMCoeff::A, Callable>
-        >(begin, end, step, std::make_tuple(detail::FDMCoeffGenerator<detail::FDMCoeff::A, Callable>(gen)));
-    }
-
-    template <typename T>
-    template <typename Callable>
-    auto FDMMatrixBorders<T>::b_coeff(const Callable &gen) const
-        -> detail::FDMMatrixBuilder
-            <
-                T,
-                detail::FDMCoeffGenerator<detail::FDMCoeff::B, Callable>
-            >
-    {
-        return detail::FDMMatrixBuilder
-        <
-            T,
-            detail::FDMCoeffGenerator<detail::FDMCoeff::B, Callable>
-        >(begin, end, step, std::make_tuple(detail::FDMCoeffGenerator<detail::FDMCoeff::B, Callable>(gen)));
-    }
-
-    template <typename T>
-    template <typename Callable>
-    auto FDMMatrixBorders<T>::c_coeff(const Callable &gen) const
-        -> detail::FDMMatrixBuilder
-            <
-                T,
-                detail::FDMCoeffGenerator<detail::FDMCoeff::C, Callable>
-            >
-    {
-        return detail::FDMMatrixBuilder
-        <
-            T,
-            detail::FDMCoeffGenerator<detail::FDMCoeff::C, Callable>
-        >(begin, end, step, std::make_tuple(detail::FDMCoeffGenerator<detail::FDMCoeff::C, Callable>(gen)));
-    }
-
-    template <typename T>
-    FDMMatrixBorders<T> fdm_matrix(const T &start, const T &end, const T &step)
-    {
-        return FDMMatrixBorders<T>(start, end, step);
-    }
-}
-
-#endif // MAFOX_FDMMATRIX_INC
-
-
-#ifndef MAFOX_UNKNOWNVARIABLE_INC
-#define MAFOX_UNKNOWNVARIABLE_INC
-
-
-#ifndef MAFOX_UNKNOWNVARIABLE_H
-#define MAFOX_UNKNOWNVARIABLE_H
-
-
-#ifndef MAFOX_HOMOGENEOUSMATRIXEQUATION_H
-#define MAFOX_HOMOGENEOUSMATRIXEQUATION_H
-
-
-#ifndef MAFOX_MATRIXEQUATION_H
-#define MAFOX_MATRIXEQUATION_H
-
-
-#ifndef MAFOX_AMATRIXEQUATION_H
-#define MAFOX_AMATRIXEQUATION_H
-
-
-namespace mafox
-{
-    template <typename Matrix, typename Vector>
-    class AMatrixEquation
-    {
-    public:
-        static_assert(std::is_base_of_v<MatrixTag, Matrix>);
-        static_assert(std::is_base_of_v<VectorTag, Vector>);
-
-        AMatrixEquation(const Matrix &, const Vector &);
-
-        AMatrixEquation(Matrix &&, const Vector &);
-
-        AMatrixEquation(const Matrix &, Vector &&);
-
-        AMatrixEquation(Matrix &&, Vector &&);
-
-        AMatrixEquation() = delete;
-
-        AMatrixEquation(const AMatrixEquation &) = default;
-
-        AMatrixEquation(AMatrixEquation &&) = default;
-
-        virtual ~AMatrixEquation() = default;
-
-        AMatrixEquation &operator=(const AMatrixEquation &) = delete;
-
-        AMatrixEquation &operator=(AMatrixEquation &&) = delete;
-
-    protected:
-        Matrix matrix;
-        Vector vector;
-    };
-}
-
-#endif // MAFOX_AMATRIXEQUATION_H
-
-namespace mafox
-{
-    template <typename Matrix, typename Vector>
-    class MatrixEquation;
-
-    template <typename T, typename Vector>
-    class MatrixEquation<TridiagonalMatrix<T>, Vector>
-        : public AMatrixEquation<TridiagonalMatrix<T>, Vector>
-    {
-    public:
-        using AMatrixEquation<TridiagonalMatrix<T>, Vector>::AMatrixEquation;
-
-        template <typename LastVariableFormula>
-        auto solve(LastVariableFormula) const
-            -> typename Vector::template vector_t<std::common_type_t<T, typename Vector::value_type>>;
-
-        auto solve() const
-            -> typename Vector::template vector_t<std::common_type_t<T, typename Vector::value_type>>;
-    };
-}
-
-#endif // MAFOX_MATRIXEQUATION_H
-
-namespace mafox
-{
-    template <typename Matrix>
-    class HomogeneousMatrixEquation
-    {
-    public:
-        static_assert(std::is_base_of_v<MatrixTag, Matrix>);
-
-        HomogeneousMatrixEquation(const Matrix &);
-
-        HomogeneousMatrixEquation(Matrix &&);
-
-        HomogeneousMatrixEquation() = delete;
-
-        HomogeneousMatrixEquation(const HomogeneousMatrixEquation &) = default;
-
-        HomogeneousMatrixEquation(HomogeneousMatrixEquation &&) = default;
-
-        ~HomogeneousMatrixEquation() = default;
-
-        HomogeneousMatrixEquation &operator=(const HomogeneousMatrixEquation &) = delete;
-
-        HomogeneousMatrixEquation &operator=(HomogeneousMatrixEquation &&) = delete;
-
-        // TODO for lvalue eq and rvalue vector
-        template <typename Vector>
-        auto operator=(const Vector &) const &&
-            -> MatrixEquation<Matrix, Vector>;
-
-        // TODO auto solve();
-
-    private:
-        Matrix matrix;
-    };
-}
-
-#endif // MAFOX_HOMOGENEOUSMATRIXEQUATION_H
-
-namespace mafox
-{
-    enum UnknownVariable
-    {
-        X = 0,
-        Y,
-        Z
-    };
-
-    template <typename Matrix>
-    auto operator*(const Matrix &, UnknownVariable)
-        -> HomogeneousMatrixEquation<Matrix>;
-
-}
-
-#endif // MAFOX_UNKNOWNVARIABLE_H
-
-namespace mafox
-{
-    template <typename Matrix>
-    auto operator*(const Matrix &matrix, UnknownVariable)
-        -> HomogeneousMatrixEquation<Matrix>
-    {
-        return HomogeneousMatrixEquation<Matrix>(matrix);
-    }
-}
-
-#endif // MAFOX_UNKNOWNVARIABLE_INC
-
-#ifndef MAFOX_AMATRIXEQUATION_INC
-#define MAFOX_AMATRIXEQUATION_INC
-
-
-namespace mafox
-{
-    template <typename Matrix, typename Vector>
-    AMatrixEquation<Matrix, Vector>::AMatrixEquation(const Matrix &m, const Vector &v)
-    : matrix(m), vector(v)
-    {}
-
-    template <typename Matrix, typename Vector>
-    AMatrixEquation<Matrix, Vector>::AMatrixEquation(Matrix &&m, const Vector &v)
-    : matrix(std::forward<Matrix>(m)), vector(v)
-    {}
-
-    template <typename Matrix, typename Vector>
-    AMatrixEquation<Matrix, Vector>::AMatrixEquation(const Matrix &m, Vector &&v)
-    : matrix(m), vector(std::forward<Vector>(v))
-    {}
-
-    template <typename Matrix, typename Vector>
-    AMatrixEquation<Matrix, Vector>::AMatrixEquation(Matrix &&m, Vector &&v)
-    : matrix(std::forward<Matrix>(m)), vector(std::forward<Vector>(v))
-    {}
-}
-
-#endif // MAFOX_AMATRIXEQUATION_INC
-
-#ifndef MAFOX_MATRIXEQUATION_INC
-#define MAFOX_MATRIXEQUATION_INC
-
-
-namespace mafox
-{
-    template <typename T, typename Vector>
-    template <typename LastVariableFormula>
-    auto MatrixEquation<TridiagonalMatrix<T>, Vector>::solve(LastVariableFormula formula) const
-        -> typename Vector::template vector_t<std::common_type_t<T, typename Vector::value_type>>
-    {
-        using R = std::common_type_t<T, typename Vector::value_type>;
-        using Result = typename Vector::template vector_t<R>;
-
-        const std::size_t N = this->vector.dimension();
-
-        std::unique_ptr<R[]> xi(new R[N-1]);
-        std::unique_ptr<R[]> eta(new R[N-1]);
-
-        auto *a = this->matrix.lower_diagonal_cdata();
-        auto *b = this->matrix.diagonal_cdata();
-        auto *c = this->matrix.upper_diagonal_cdata();
-
-        xi[0]  = -c[0] / b[0];
-        eta[0] = this->vector(0) / b[0];
-
-        R div = 0;
-        for(std::size_t i = 1, j = 0; i < N-1; ++i, ++j)
-        {
-            div = (b[i] + a[j]*xi[j]);
-            assert(div != 0);
-
-            xi[i] = -c[i] / div;
-            eta[i] = (this->vector(i) - a[j]*eta[j]) / div;
-        }
-
-        Result result(N);
-
-        result.set_element(N-1, formula(xi[N-2], eta[N-2], a[N-2], b[N-1], c[N-2], this->vector(N-1)));
-        for(std::size_t i = N-1, j = N-2; i > 0; --i, --j)
-            result.set_element(j, xi[j]*result(i) + eta[j]);
-
-        return result;
-    }
-
-    template <typename T, typename Vector>
-    auto MatrixEquation<TridiagonalMatrix<T>, Vector>::solve() const
-        -> typename Vector::template vector_t<std::common_type_t<T, typename Vector::value_type>>
-    {
-        return solve
-        (
-            []
-            (
-                const auto &xi, 
-                const auto &eta, 
-                const auto &a, 
-                const auto &b, 
-                const auto &c, 
-                const auto &d
-            ) 
-            { 
-                return (d - a*eta) / (b + a*xi);
-            }
-        );
-    }
-}
-
-#endif // MAFOX_MATRIXEQUATION_INC
-
-#ifndef MAFOX_HOMOGENEOUSMATRIXEQUATION_INC
-#define MAFOX_HOMOGENEOUSMATRIXEQUATION_INC
-
-
-namespace mafox
-{
-    template <typename Matrix>
-    HomogeneousMatrixEquation<Matrix>::HomogeneousMatrixEquation(const Matrix &matrix)
-    : matrix(matrix)
-    {
-        assert(matrix.is_square());
-    }
-
-    template <typename Matrix>
-    HomogeneousMatrixEquation<Matrix>::HomogeneousMatrixEquation(Matrix &&matrix)
-    : matrix(std::forward<Matrix>(matrix))
-    {
-        assert(matrix.is_square());
-    }
-
-    template <typename Matrix>
-    template <typename Vector>
-    auto HomogeneousMatrixEquation<Matrix>::operator=(const Vector &vector) const &&
-        -> MatrixEquation<Matrix, Vector>
-    {
-        assert(vector.dimension() == matrix.rows());
-
-        return MatrixEquation<Matrix, Vector>(std::move(matrix), vector);
-    }
-}
-
-#endif // MAFOX_HOMOGENEOUSMATRIXEQUATION_INC
+// #include "unknownvariable.inc"
+// #include "amatrixequation.inc"
+// #include "matrixequation.inc"
+// #include "homogeneousmatrixequation.inc"
 
 #endif // MAFOX_H
 

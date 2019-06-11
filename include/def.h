@@ -31,6 +31,8 @@ namespace mafox
     public:
         using std::runtime_error::runtime_error;
     };
+
+    struct This {};
 }
 
 #define MAFOX_FATAL(message) do { assert(false && message); throw mafox::FatalError(message); } while(0)
