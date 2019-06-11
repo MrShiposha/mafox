@@ -2353,11 +2353,12 @@ std::ostream &operator<<(std::ostream &os, const mafox::AMatrix<T, MatrixHierarc
 {
     std::streamsize width = os.width();
     std::streamsize precision = os.precision();
+    char fill = os.fill();
 
     for(std::size_t i = 0, j = 0; i < matrix.rows(); ++i)
     {
         for(j = 0; j < matrix.cols(); ++j)
-            os << std::setw(width) << std::setprecision(precision) << matrix.element(i, j) << ' ';
+            os << std::setw(width) << std::setprecision(precision) << std::setfill(fill) << matrix.element(i, j) << ' ';
         os << '\n';
     }
 
@@ -3389,6 +3390,9 @@ namespace mafox
     constexpr bool is_exactly_matrix() { return is_matrix<T>() && !is_vector<T>(); }
 }
 
+template <typename T, typename MatrixHierarchyEnd>
+std::ostream &operator<<(std::ostream &, const mafox::AVector<T, MatrixHierarchyEnd> &);
+
 #endif // MAFOX_AVECTOR_H
 
 namespace mafox
@@ -3459,6 +3463,18 @@ namespace mafox
         set_element(coordinate, value);
         return true;
     }
+}
+
+template <typename T, typename MatrixHierarchyEnd>
+std::ostream &operator<<(std::ostream &os, const mafox::AVector<T, MatrixHierarchyEnd> &vector)
+{
+    std::streamsize width = os.width();
+    std::streamsize precision = os.precision();
+    char fill = os.fill();
+
+    for(std::size_t i = 0; i < vector.dimension(); ++i)
+        os << std::setw(width) << std::setprecision(precision) << std::setfill(fill) << vector.element(i) << ' ';
+    return os << std::flush;
 }
 
 #endif // MAFOX_AVECTOR_INC

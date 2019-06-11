@@ -73,4 +73,16 @@ namespace mafox
     }
 }
 
+template <typename T, typename MatrixHierarchyEnd>
+std::ostream &operator<<(std::ostream &os, const mafox::AVector<T, MatrixHierarchyEnd> &vector)
+{
+    std::streamsize width = os.width();
+    std::streamsize precision = os.precision();
+    char fill = os.fill();
+
+    for(std::size_t i = 0; i < vector.dimension(); ++i)
+        os << std::setw(width) << std::setprecision(precision) << std::setfill(fill) << vector.element(i) << ' ';
+    return os << std::flush;
+}
+
 #endif // MAFOX_AVECTOR_INC

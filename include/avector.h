@@ -115,4 +115,7 @@ namespace mafox
     constexpr bool is_exactly_matrix() { return is_matrix<T>() && !is_vector<T>(); }
 }
 
+template <typename T, typename MatrixHierarchyEnd>
+std::ostream &operator<<(std::ostream &, const mafox::AVector<T, MatrixHierarchyEnd> &);
+
 #endif // MAFOX_AVECTOR_H
