@@ -41,7 +41,7 @@ namespace mafox
             memcpy(data.get(), m_data->data.get(), dim * sizeof(T));
         }
 
-        virtual void assign(std::shared_ptr<vector_data_t<T>> m_data)
+        virtual void assign(std::shared_ptr<vector_data_t<T>> m_data) override
         {
             if(auto raw_ptr = std::dynamic_pointer_cast<raw_vector_data_t<T>>(m_data))
                 assign(raw_ptr);

@@ -11,8 +11,6 @@
 #include "avector.inc"
 #include "vector.inc"
 
-// #include "fdm.h"
-
 #include "unknownvariable.inc"
 #include "amatrixequation.inc"
 #include "matrixequation.inc"
