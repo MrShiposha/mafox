@@ -23,7 +23,9 @@ namespace mafox
     public:
         USING_MAFOX_VECTOR_TYPES(Vector);
 
-        Vector(std::size_t dimension);
+        explicit Vector(std::size_t dimension);
+
+        Vector(std::initializer_list<T>);
 
         Vector(const Vector &);
 

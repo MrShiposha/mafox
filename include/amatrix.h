@@ -4,6 +4,7 @@
 #include <iostream>
 #include <iomanip>
 #include <utility>
+#include <initializer_list>
 
 #include "imatrix.h"
 #include "size.h"

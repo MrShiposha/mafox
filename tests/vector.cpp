@@ -32,4 +32,10 @@ TEST_CASE("Vector creation/assign", "[mafox::Vector]")
     REQUIRE(mv(1) == -1);
     REQUIRE(mv(2) == 112);
     REQUIRE(mv.shared_data() == shared_data);
+
+    Vector vlist = { 10, 20, 30 };
+    REQUIRE(vlist.dimension() == 3);
+    REQUIRE(vlist(0) == 10);
+    REQUIRE(vlist(1) == 20);
+    REQUIRE(vlist(2) == 30);
 }

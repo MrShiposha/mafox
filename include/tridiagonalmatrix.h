@@ -12,7 +12,7 @@ namespace mafox
         using base_matrix_t = MatrixExtender<::mafox::BandMatrix, TridiagonalMatrix<T>, MatrixHierarchyEnd>;
         USING_MAFOX_MATRIX_TYPES(TridiagonalMatrix);
 
-        TridiagonalMatrix(std::size_t size);
+        explicit TridiagonalMatrix(std::size_t size);
 
         TridiagonalMatrix(base_matrix_t &&);
 

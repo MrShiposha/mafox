@@ -7,6 +7,7 @@
 #include <functional>
 #include <iostream>
 #include <iomanip>
+#include <initializer_list>
 #include <memory>
 #include <cstring>
 
@@ -3188,7 +3189,7 @@ namespace mafox
         using base_matrix_t = MatrixExtender<::mafox::BandMatrix, TridiagonalMatrix<T>, MatrixHierarchyEnd>;
         USING_MAFOX_MATRIX_TYPES(TridiagonalMatrix);
 
-        TridiagonalMatrix(std::size_t size);
+        explicit TridiagonalMatrix(std::size_t size);
 
         TridiagonalMatrix(base_matrix_t &&);
 
@@ -3508,7 +3509,9 @@ namespace mafox
     public:
         USING_MAFOX_VECTOR_TYPES(Vector);
 
-        Vector(std::size_t dimension);
+        explicit Vector(std::size_t dimension);
+
+        Vector(std::initializer_list<T>);
 
         Vector(const Vector &);
 
@@ -3623,6 +3626,15 @@ namespace mafox
     : m_data(std::make_shared<raw_vector_data_t<T>>(dimension))
     {
         zero_array(std::static_pointer_cast<raw_vector_data_t<T>>(m_data)->data.get(), dimension * sizeof(T));
+    }
+
+    template <typename T, typename MatrixHierarchyEnd>
+    Vector<T, MatrixHierarchyEnd>::Vector(std::initializer_list<T> list)
+    : Vector(list.size())
+    {
+        std::size_t i = 0;
+        for(auto &&v : list)
+            set_element(i++, v);
     }
 
     template <typename T, typename MatrixHierarchyEnd>
