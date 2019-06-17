@@ -3988,7 +3988,7 @@ namespace mafox::detail
     template <typename Matrix>
     template <typename Value>
     auto MatrixEquationLHS<Matrix>::operator=(const Value &value) const
-        -> std::enable_if_t<!is_vector<Value>(), MatrixEquation<Matrix, mafox::Vector<Value>>>
+        -> std::enable_if_t<!is_matrix<Value>(), MatrixEquation<Matrix, mafox::Vector<Value>>>
     {
         mafox::Vector<Value> rhs_vector(matrix->rows(), value);
         return (*matrix*X = rhs_vector);
