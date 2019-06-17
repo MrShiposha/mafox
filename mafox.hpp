@@ -3511,6 +3511,8 @@ namespace mafox
 
         explicit Vector(std::size_t dimension);
 
+        Vector(std::size_t dimension, const T &initial_value);
+
         Vector(std::initializer_list<T>);
 
         Vector(const Vector &);
@@ -3629,6 +3631,15 @@ namespace mafox
     }
 
     template <typename T, typename MatrixHierarchyEnd>
+    Vector<T, MatrixHierarchyEnd>::Vector(std::size_t dimension, const T &initial_value)
+    : m_data(std::make_shared<raw_vector_data_t<T>>(dimension))
+    {
+        auto raw_data = std::static_pointer_cast<raw_vector_data_t<T>>(m_data);
+        for(std::size_t i = 0; i < dimension; ++i)
+            raw_data->data[i] = initial_value;
+    }
+
+    template <typename T, typename MatrixHierarchyEnd>
     Vector<T, MatrixHierarchyEnd>::Vector(std::initializer_list<T> list)
     : Vector(list.size())
     {
@@ -3736,8 +3747,8 @@ namespace mafox
 #define MAFOX_UNKNOWNVARIABLE_H
 
 
-#ifndef MAFOX_HOMOGENEOUSMATRIXEQUATION_H
-#define MAFOX_HOMOGENEOUSMATRIXEQUATION_H
+#ifndef MAFOX_MATRIXEQUATIONLHS_H
+#define MAFOX_MATRIXEQUATIONLHS_H
 
 
 #ifndef MAFOX_MATRIXEQUATION_H
@@ -3802,41 +3813,42 @@ namespace mafox
 
 #endif // MAFOX_MATRIXEQUATION_H
 
-namespace mafox
+namespace mafox::detail
 {
     template <typename Matrix>
-    class HomogeneousMatrixEquation
+    class MatrixEquationLHS
     {
     public:
         static_assert(is_matrix<Matrix>());
 
-        HomogeneousMatrixEquation(const Matrix &);
+        MatrixEquationLHS(const Matrix &);
 
-        HomogeneousMatrixEquation() = delete;
+        MatrixEquationLHS() = delete;
 
-        HomogeneousMatrixEquation(const HomogeneousMatrixEquation &) = default;
+        MatrixEquationLHS(const MatrixEquationLHS &) = default;
 
-        HomogeneousMatrixEquation(HomogeneousMatrixEquation &&) = default;
+        MatrixEquationLHS(MatrixEquationLHS &&) = default;
 
-        ~HomogeneousMatrixEquation() = default;
+        ~MatrixEquationLHS() = default;
 
-        HomogeneousMatrixEquation &operator=(const HomogeneousMatrixEquation &) = delete;
+        MatrixEquationLHS &operator=(const MatrixEquationLHS &) = delete;
 
-        HomogeneousMatrixEquation &operator=(HomogeneousMatrixEquation &&) = delete;
+        MatrixEquationLHS &operator=(MatrixEquationLHS &&) = delete;
 
-        // TODO for lvalue eq and rvalue vector
         template <typename Vector>
-        auto operator=(const Vector &) const &&
-            -> MatrixEquation<Matrix, Vector>;
+        auto operator=(const Vector &) const
+            -> std::enable_if_t<is_vector<Vector>(), MatrixEquation<Matrix, Vector>>;
 
-        // TODO auto solve();
+        template <typename Value>
+        auto operator=(const Value &) const
+            -> std::enable_if_t<!is_matrix<Value>(), MatrixEquation<Matrix, mafox::Vector<Value>>>;
 
     private:
         std::shared_ptr<const Matrix> matrix;
     };
 }
 
-#endif // MAFOX_HOMOGENEOUSMATRIXEQUATION_H
+#endif // MAFOX_MATRIXEQUATIONLHS_H
 
 namespace mafox
 {
@@ -3849,7 +3861,7 @@ namespace mafox
 
     template <typename Matrix>
     auto operator*(const Matrix &, UnknownVariable)
-        -> HomogeneousMatrixEquation<Matrix>;
+        -> detail::MatrixEquationLHS<Matrix>;
 
 }
 
@@ -3859,9 +3871,9 @@ namespace mafox
 {
     template <typename Matrix>
     auto operator*(const Matrix &matrix, UnknownVariable)
-        -> HomogeneousMatrixEquation<Matrix>
+        -> detail::MatrixEquationLHS<Matrix>
     {
-        return HomogeneousMatrixEquation<Matrix>(matrix);
+        return detail::MatrixEquationLHS<Matrix>(matrix);
     }
 }
 
@@ -3950,14 +3962,14 @@ namespace mafox
 
 #endif // MAFOX_MATRIXEQUATION_INC
 
-#ifndef MAFOX_HOMOGENEOUSMATRIXEQUATION_INC
-#define MAFOX_HOMOGENEOUSMATRIXEQUATION_INC
+#ifndef MAFOX_MATRIXEQUATIONLHS_INC
+#define MAFOX_MATRIXEQUATIONLHS_INC
 
 
-namespace mafox
+namespace mafox::detail
 {
     template <typename Matrix>
-    HomogeneousMatrixEquation<Matrix>::HomogeneousMatrixEquation(const Matrix &matrix)
+    MatrixEquationLHS<Matrix>::MatrixEquationLHS(const Matrix &matrix)
     : matrix(matrix.share_ptr())
     {
         assert(matrix.is_square());
@@ -3965,16 +3977,25 @@ namespace mafox
 
     template <typename Matrix>
     template <typename Vector>
-    auto HomogeneousMatrixEquation<Matrix>::operator=(const Vector &vector) const &&
-        -> MatrixEquation<Matrix, Vector>
+    auto MatrixEquationLHS<Matrix>::operator=(const Vector &vector) const
+        -> std::enable_if_t<is_vector<Vector>(), MatrixEquation<Matrix, Vector>>
     {
         assert(vector.dimension() == matrix->rows());
 
         return MatrixEquation<Matrix, Vector>(matrix, vector.share_ptr());
     }
+
+    template <typename Matrix>
+    template <typename Value>
+    auto MatrixEquationLHS<Matrix>::operator=(const Value &value) const
+        -> std::enable_if_t<!is_vector<Value>(), MatrixEquation<Matrix, mafox::Vector<Value>>>
+    {
+        mafox::Vector<Value> rhs_vector(matrix->rows(), value);
+        return (*matrix*X = rhs_vector);
+    }
 }
 
-#endif // MAFOX_HOMOGENEOUSMATRIXEQUATION_INC
+#endif // MAFOX_MATRIXEQUATIONLHS_INC
 
 #endif // MAFOX_H
 

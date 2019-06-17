@@ -4,7 +4,7 @@
 
 #include "def.h"
 #include "amatrix.h"
-#include "homogeneousmatrixequation.h"
+#include "detail/matrixequationlhs.h"
 
 namespace mafox
 {
@@ -17,7 +17,7 @@ namespace mafox
 
     template <typename Matrix>
     auto operator*(const Matrix &, UnknownVariable)
-        -> HomogeneousMatrixEquation<Matrix>;
+        -> detail::MatrixEquationLHS<Matrix>;
 
 }
 

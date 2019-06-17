@@ -14,6 +14,6 @@
 #include "unknownvariable.inc"
 #include "amatrixequation.inc"
 #include "matrixequation.inc"
-#include "homogeneousmatrixequation.inc"
+#include "detail/matrixequationlhs.inc"
 
 #endif // MAFOX_H

@@ -38,4 +38,10 @@ TEST_CASE("Vector creation/assign", "[mafox::Vector]")
     REQUIRE(vlist(0) == 10);
     REQUIRE(vlist(1) == 20);
     REQUIRE(vlist(2) == 30);
+
+    Vector<int> vinitial(3, 41);
+    REQUIRE(vinitial.dimension() == 3);
+    REQUIRE(vinitial(0) == 41);
+    REQUIRE(vinitial(1) == 41);
+    REQUIRE(vinitial(2) == 41);
 }

@@ -8,9 +8,9 @@ namespace mafox
 {
     template <typename Matrix>
     auto operator*(const Matrix &matrix, UnknownVariable)
-        -> HomogeneousMatrixEquation<Matrix>
+        -> detail::MatrixEquationLHS<Matrix>
     {
-        return HomogeneousMatrixEquation<Matrix>(matrix);
+        return detail::MatrixEquationLHS<Matrix>(matrix);
     }
 }
 

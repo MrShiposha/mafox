@@ -82,6 +82,15 @@ namespace mafox
     }
 
     template <typename T, typename MatrixHierarchyEnd>
+    Vector<T, MatrixHierarchyEnd>::Vector(std::size_t dimension, const T &initial_value)
+    : m_data(std::make_shared<raw_vector_data_t<T>>(dimension))
+    {
+        auto raw_data = std::static_pointer_cast<raw_vector_data_t<T>>(m_data);
+        for(std::size_t i = 0; i < dimension; ++i)
+            raw_data->data[i] = initial_value;
+    }
+
+    template <typename T, typename MatrixHierarchyEnd>
     Vector<T, MatrixHierarchyEnd>::Vector(std::initializer_list<T> list)
     : Vector(list.size())
     {

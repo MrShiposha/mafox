@@ -25,6 +25,8 @@ namespace mafox
 
         explicit Vector(std::size_t dimension);
 
+        Vector(std::size_t dimension, const T &initial_value);
+
         Vector(std::initializer_list<T>);
 
         Vector(const Vector &);
