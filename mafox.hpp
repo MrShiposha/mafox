@@ -2152,16 +2152,6 @@ namespace mafox
     template <typename T>
     struct SizeND<1, T>
     {
-        SizeND()
-        : length(dimension[0])
-        {}
-
-        SizeND(const T &l)
-        : SizeND()
-        {
-            dimension[0] = l;
-        }
-
         template <std::size_t INDEX>
         auto &get()
         {
@@ -2176,24 +2166,22 @@ namespace mafox
             return const_cast<SizeND*>(this)->template get<INDEX>();
         }
 
+        T &length()
+        {
+            return dimension[0];
+        }
+
+        const T &length() const
+        {
+            return const_cast<SizeND*>(this)->length();
+        }
+
         T dimension[1];
-        T &length;
     };
 
     template <typename T>
     struct SizeND<2, T>
     {
-        SizeND()
-        : width(dimension[0]), height(dimension[1])
-        {}
-
-        SizeND(const T &w, const T &h)
-        : SizeND()
-        {
-            dimension[0] = w;
-            dimension[1] = h;
-        }
-
         template <std::size_t INDEX>
         auto &get()
         {
@@ -2208,26 +2196,32 @@ namespace mafox
             return const_cast<SizeND*>(this)->template get<INDEX>();
         }
 
+        T &width()
+        {
+            return dimension[0];
+        }
+
+        const T &width() const
+        {
+            return const_cast<SizeND*>(this)->width();
+        }
+
+        T &height()
+        {
+            return dimension[1];
+        }
+
+        const T &height() const
+        {
+            return const_cast<SizeND*>(this)->height();
+        }
+
         T dimension[2];
-        T &width;
-        T &height;
     };
 
     template <typename T>
     struct SizeND<3, T>
     {
-        SizeND()
-        : width(dimension[0]), height(dimension[1]), length(dimension[2])
-        {}
-
-        SizeND(const T &w, const T &h, const T &l)
-        : SizeND()
-        {
-            dimension[0] = w;
-            dimension[1] = h;
-            dimension[2] = l;
-        }
-
         template <std::size_t INDEX>
         auto &get()
         {
@@ -2242,10 +2236,37 @@ namespace mafox
             return const_cast<SizeND*>(this)->template get<INDEX>();
         }
 
+        T &width()
+        {
+            return dimension[0];
+        }
+
+        const T &width() const
+        {
+            return const_cast<SizeND*>(this)->width();
+        }
+
+        T &height()
+        {
+            return dimension[1];
+        }
+
+        const T &height() const
+        {
+            return const_cast<SizeND*>(this)->height();
+        }
+
+        T &length()
+        {
+            return dimension[2];
+        }
+
+        const T &length() const
+        {
+            return const_cast<SizeND*>(this)->length();
+        }
+
         T dimension[3];
-        T &width;
-        T &height;
-        T &length;
     };
 
     template <typename T>
